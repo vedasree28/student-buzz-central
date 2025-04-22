@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,12 +132,12 @@ const EventCard = ({ event, showActions = true }: EventCardProps) => {
             <Link to={`/events/${event.id}`}>View Details</Link>
           </Button>
           
-          {showActions && user && status !== "past" && (
+          {showActions && user && status !== 'past' && (
             <Button 
               variant={isRegistered ? "destructive" : "default"}
               className="flex-1"
               onClick={handleRegistration}
-              disabled={status === "past"}
+              disabled={status === 'past'}
             >
               {isRegistered ? "Cancel Registration" : "Register"}
             </Button>

@@ -17,10 +17,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import GoogleSignInButton from '@/components/GoogleSignInButton'; // Added import
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Home = () => {
   const { events, getEventStatus } = useEvents();
+  const { isAuthenticated } = useAuth();
   const [category, setCategory] = useState<EventCategory | 'all'>('all');
 
   const upcomingEvents = events
@@ -77,10 +79,12 @@ const Home = () => {
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/register">Create Account</Link>
                 </Button>
-                {/* Google Sign In Button */}
-                <div>
-                  <GoogleSignInButton />
-                </div>
+                {/* Render GoogleSIgnInButton ONLY if NOT authenticated */}
+                {!isAuthenticated && (
+                  <div>
+                    <GoogleSignInButton />
+                  </div>
+                )}
               </div>
             </div>
             <img
@@ -198,4 +202,3 @@ const Home = () => {
 };
 
 export default Home;
-

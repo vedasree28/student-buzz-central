@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Calendar, LogOut, Menu, User, X } from 'lucide-react';
+import { Bell, Calendar, LogOut, Menu, User, Mail, X } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -51,6 +51,11 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center gap-4">
           {isAuthenticated ? (
             <>
+              {/* User Email with Icon */}
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-slate-100 border border-slate-200">
+                <Mail size={16} className="text-blue-600" />
+                <span className="text-sm text-gray-700 font-medium">{user?.email}</span>
+              </div>
               <Button variant="ghost" size="icon" className="relative" asChild>
                 <Link to="/notifications">
                   <Bell className="h-5 w-5" />
@@ -128,6 +133,10 @@ export const Navbar = () => {
             <div className="h-px w-full bg-border" />
             {isAuthenticated ? (
               <>
+                <div className="flex items-center gap-2 px-2 py-1 rounded bg-slate-100 border border-slate-200">
+                  <Mail size={16} className="text-blue-600" />
+                  <span className="text-sm text-gray-700 font-medium">{user?.email}</span>
+                </div>
                 <Link to="/profile" className="flex items-center py-2" onClick={() => setMobileMenuOpen(false)}>
                   Profile
                 </Link>

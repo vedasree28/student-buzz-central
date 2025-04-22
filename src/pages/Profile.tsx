@@ -23,21 +23,14 @@ const Profile = () => {
     );
   }
 
+  // User's registered events
   const registeredEvents = events.filter(ev =>
     userRegistrations.includes(ev.id)
   );
 
-  const upcomingEvents = registeredEvents
-    .filter(event => getEventStatus(event) === "upcoming")
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-
-  const ongoingEvents = registeredEvents
-    .filter(event => getEventStatus(event) === "ongoing")
-    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
-
-  const pastEvents = registeredEvents
-    .filter(event => getEventStatus(event) === "past")
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  // Separate into On Campus and Off Campus
+  const onCampusEvents = registeredEvents.filter(ev => ev.campusType === "on");
+  const offCampusEvents = registeredEvents.filter(ev => ev.campusType === "off");
 
   return (
     <div className="container py-8">
@@ -58,38 +51,41 @@ const Profile = () => {
           </Button>
         </div>
       )}
-      {upcomingEvents.length > 0 && (
-        <section className="mb-6">
-          <h3 className="text-xl font-semibold mb-2">Upcoming Events</h3>
+
+      {/* On Campus Events Section */}
+      <section className="mb-8">
+        <h3 className="text-xl font-semibold mb-2">On Campus Events</h3>
+        {onCampusEvents.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {upcomingEvents.map(event => (
+            {onCampusEvents.map(event => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
-        </section>
-      )}
-      {ongoingEvents.length > 0 && (
-        <section className="mb-6">
-          <h3 className="text-xl font-semibold mb-2">Happening Now</h3>
+        ) : (
+          <div className="text-muted-foreground px-4 py-8 border rounded">
+            No On Campus events registered for.
+          </div>
+        )}
+      </section>
+
+      {/* Off Campus Events Section */}
+      <section className="mb-4">
+        <h3 className="text-xl font-semibold mb-2">Off Campus Events</h3>
+        {offCampusEvents.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {ongoingEvents.map(event => (
+            {offCampusEvents.map(event => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
-        </section>
-      )}
-      {pastEvents.length > 0 && (
-        <section className="mb-6">
-          <h3 className="text-xl font-semibold mb-2">Past Events</h3>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {pastEvents.map(event => (
-              <EventCard key={event.id} event={event} showActions={false} />
-            ))}
+        ) : (
+          <div className="text-muted-foreground px-4 py-8 border rounded">
+            No Off Campus events registered for.
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 };
 
 export default Profile;
+

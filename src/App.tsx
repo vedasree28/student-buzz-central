@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ import CreateEvent from "@/pages/CreateEvent";
 import EditEvent from "@/pages/EditEvent";
 import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
+import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +44,7 @@ const App = () => (
                   <Route path="/events/new" element={<CreateEvent />} />
                   <Route path="/events/:id/edit" element={<EditEvent />} />
                   <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

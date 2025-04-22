@@ -31,7 +31,8 @@ const EventCard = ({ event, showActions = true }: EventCardProps) => {
   const { user } = useAuth();
   const { getEventStatus, registerForEvent, unregisterFromEvent, userRegistrations } = useEvents();
   
-  const status = getEventStatus(event);
+  // Explicitly type the status to ensure type safety
+  const status: EventStatus = getEventStatus(event);
   const isRegistered = userRegistrations.includes(event.id);
   
   const formatDate = (dateString: string) => {

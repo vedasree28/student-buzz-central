@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Calendar, LogOut, Menu, User, Mail, X } from 'lucide-react';
+import { Bell, Calendar, LogOut, Menu, X, Mail } from 'lucide-react';
+import UserProfilePopover from './UserProfilePopover';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -47,7 +48,7 @@ export const Navbar = () => {
           )}
         </nav>
 
-        {/* Auth Actions */}
+        {/* Auth Actions or Profile */}
         <div className="hidden md:flex items-center gap-4">
           {isAuthenticated ? (
             <>
@@ -64,13 +65,12 @@ export const Navbar = () => {
                   </span>
                 </Link>
               </Button>
-              
+              {/* Profile popover */}
+              <UserProfilePopover />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100">
-                      <User className="h-5 w-5 text-purple-600" />
-                    </div>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full hidden">
+                    {/* Old user icon button, now hidden in favor of popover */}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -96,6 +96,9 @@ export const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button variant="outline" size="sm" className="ml-2" onClick={handleLogout}>
+                Log out
+              </Button>
             </>
           ) : (
             <>
@@ -137,6 +140,7 @@ export const Navbar = () => {
                   <Mail size={16} className="text-blue-600" />
                   <span className="text-sm text-gray-700 font-medium">{user?.email}</span>
                 </div>
+                <UserProfilePopover />
                 <Link to="/profile" className="flex items-center py-2" onClick={() => setMobileMenuOpen(false)}>
                   Profile
                 </Link>

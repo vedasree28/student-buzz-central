@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { toast } from "sonner";
 
@@ -6,12 +5,15 @@ export type EventCategory = 'academic' | 'social' | 'career' | 'sports' | 'arts'
 
 export type EventStatus = 'upcoming' | 'ongoing' | 'past';
 
+export type CampusType = 'on' | 'off';
+
 export type EventType = {
   id: string;
   title: string;
   description: string;
   category: EventCategory;
   location: string;
+  campusType: CampusType;
   startDate: string;
   endDate: string;
   imageUrl: string;
@@ -39,6 +41,7 @@ const INITIAL_EVENTS: EventType[] = [
     description: 'Welcome event for new students to get familiar with campus resources, meet faculty, and connect with peers.',
     category: 'academic',
     location: 'Main Auditorium',
+    campusType: 'on',
     startDate: '2025-06-10T09:00:00Z',
     endDate: '2025-06-10T14:00:00Z',
     imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c',
@@ -52,6 +55,7 @@ const INITIAL_EVENTS: EventType[] = [
     description: 'Annual career fair with representatives from top companies across various industries.',
     category: 'career',
     location: 'University Center',
+    campusType: 'on',
     startDate: '2025-05-15T10:00:00Z',
     endDate: '2025-05-15T16:00:00Z',
     imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f',
@@ -65,6 +69,7 @@ const INITIAL_EVENTS: EventType[] = [
     description: 'Annual spring concert featuring popular artists and student performances.',
     category: 'arts',
     location: 'Campus Stadium',
+    campusType: 'off',
     startDate: '2025-04-20T18:00:00Z',
     endDate: '2025-04-20T22:00:00Z',
     imageUrl: 'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b',
@@ -78,6 +83,7 @@ const INITIAL_EVENTS: EventType[] = [
     description: '48-hour event where students collaborate on innovative tech projects and compete for prizes.',
     category: 'academic',
     location: 'Technology Building',
+    campusType: 'on',
     startDate: '2025-03-05T17:00:00Z',
     endDate: '2025-03-07T17:00:00Z',
     imageUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085',
@@ -124,11 +130,12 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
     toast.success('Event added successfully!');
   };
 
-  const updateEvent = (id: string, updatedFields: Partial<Omit<EventType, 'id' | 'registeredUsers'>>) => {
-    const updatedEvents = events.map(event => 
-      event.id === id 
-        ? { ...event, ...updatedFields } 
-        : event
+  const updateEvent = (
+    id: string,
+    updatedFields: Partial<Omit<EventType, 'id' | 'registeredUsers'>>
+  ) => {
+    const updatedEvents = events.map((event) =>
+      event.id === id ? { ...event, ...updatedFields } : event
     );
     
     saveEvents(updatedEvents);

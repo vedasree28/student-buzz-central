@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEvents, EventCategory } from '@/contexts/EventContext';
+import { useEvents, EventCategory, CampusType } from '@/contexts/EventContext';
 import { format } from 'date-fns';
 import { ArrowLeft } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label as UiLabel } from "@/components/ui/label";
 
 type EventFormProps = {
   mode: 'create' | 'edit';
@@ -36,6 +37,7 @@ const EventForm = ({ mode }: EventFormProps) => {
   const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1505373877841-8d25f7d46678');
   const [organizer, setOrganizer] = useState('');
   const [capacity, setCapacity] = useState(100);
+  const [campusType, setCampusType] = useState<CampusType>('on');
   
   const categories: { value: EventCategory; label: string }[] = [
     { value: 'academic', label: 'Academic' },
@@ -57,6 +59,7 @@ const EventForm = ({ mode }: EventFormProps) => {
         setOrganizer(eventToEdit.organizer);
         setCapacity(eventToEdit.capacity);
         setImageUrl(eventToEdit.imageUrl);
+        setCampusType(eventToEdit.campusType || 'on');
         
         // Parse dates and times
         const startDateTime = new Date(eventToEdit.startDate);
@@ -83,6 +86,7 @@ const EventForm = ({ mode }: EventFormProps) => {
         description,
         category,
         location,
+        campusType,
         startDate: startDateTime,
         endDate: endDateTime,
         imageUrl,
@@ -96,6 +100,7 @@ const EventForm = ({ mode }: EventFormProps) => {
         description,
         category,
         location,
+        campusType,
         startDate: startDateTime,
         endDate: endDateTime,
         imageUrl,
@@ -250,6 +255,24 @@ const EventForm = ({ mode }: EventFormProps) => {
               onChange={(e) => setCapacity(parseInt(e.target.value))}
               required
             />
+          </div>
+
+          <div className="grid gap-2">
+            <UiLabel>Campus Location</UiLabel>
+            <RadioGroup
+              value={campusType}
+              onValueChange={(v) => setCampusType(v as CampusType)}
+              className="flex gap-4"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="on" id="on-campus" />
+                <UiLabel htmlFor="on-campus">On Campus</UiLabel>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="off" id="off-campus" />
+                <UiLabel htmlFor="off-campus">Off Campus</UiLabel>
+              </div>
+            </RadioGroup>
           </div>
         </div>
         

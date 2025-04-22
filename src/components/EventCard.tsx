@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock, MapPin, Home, MapPinOff } from 'lucide-react';
 import { EventType, EventStatus, useEvents } from '@/contexts/EventContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -10,6 +10,21 @@ interface EventCardProps {
   event: EventType;
   showActions?: boolean;
 }
+
+const getCampusTypeBadge = (campusType: "on" | "off") => {
+  if (campusType === "on") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-[#E5DEFF] px-2 py-0.5 text-xs font-medium text-[#6E59A5]">
+        <Home className="w-4 h-4 inline" /> On Campus
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-[#D3E4FD] px-2 py-0.5 text-xs font-medium text-[#0EA5E9]">
+      <MapPinOff className="w-4 h-4 inline" /> Off Campus
+    </span>
+  );
+};
 
 const EventCard = ({ event, showActions = true }: EventCardProps) => {
   const { user } = useAuth();
@@ -76,6 +91,9 @@ const EventCard = ({ event, showActions = true }: EventCardProps) => {
             {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
           </Badge>
         </div>
+        <div className="absolute bottom-2 left-2">
+          {getCampusTypeBadge(event.campusType)}
+        </div>
       </div>
       
       <div className="flex-1 p-4 flex flex-col">
@@ -91,8 +109,9 @@ const EventCard = ({ event, showActions = true }: EventCardProps) => {
             <div className="flex items-center">
               <Clock className="mr-2 h-4 w-4" />
               <span>
-                {status === 'ongoing' ? 'Ends ' : 'Duration '}
-                {format(new Date(event.startDate), 'h:mm a')} - {format(new Date(event.endDate), 'h:mm a')}
+                {status === 'ongoing'
+                  ? `Ends ${format(new Date(event.endDate), 'h:mm a')}`
+                  : `Duration ${format(new Date(event.startDate), 'h:mm a')} - ${format(new Date(event.endDate), 'h:mm a')}`}
               </span>
             </div>
           )}

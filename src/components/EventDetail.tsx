@@ -1,11 +1,25 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEvents, EventType } from '@/contexts/EventContext';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, User, Home, MapPinOff } from 'lucide-react';
 import { format } from 'date-fns';
+
+const getCampusTypeBadge = (campusType: "on" | "off") => {
+  if (campusType === "on") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-[#E5DEFF] px-2 py-0.5 text-xs font-medium text-[#6E59A5]">
+        <Home className="w-4 h-4 inline" /> On Campus
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-[#D3E4FD] px-2 py-0.5 text-xs font-medium text-[#0EA5E9]">
+      <MapPinOff className="w-4 h-4 inline" /> Off Campus
+    </span>
+  );
+};
 
 const EventDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,13 +94,13 @@ const EventDetail = () => {
       >
         Back to Events
       </Button>
-      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2 items-center">
               {getStatusBadge()}
               <Badge className="bg-purple-500">{event.category}</Badge>
+              {getCampusTypeBadge(event.campusType)}
             </div>
             <h1 className="text-3xl font-bold">{event.title}</h1>
             <p className="text-muted-foreground">{event.description}</p>

@@ -65,9 +65,13 @@ const Home = () => {
             </div>
           </div>
           <img
-            src="/placeholder.svg"
-            alt="Event"
+            src="/lovable-uploads/7bc18243-e04c-4f91-9fc4-21aba9afdb6a.png"
+            alt="Campus Events"
             className="w-[380px] rounded-xl border shadow"
+            onError={(e) => {
+              // Fallback to placeholder if the image fails to load
+              e.currentTarget.src = "/placeholder.svg";
+            }}
           />
         </div>
       </section>

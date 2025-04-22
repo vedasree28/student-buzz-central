@@ -17,6 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import GoogleSignInButton from '@/components/GoogleSignInButton'; // Added import
 
 const Home = () => {
   const { events, getEventStatus } = useEvents();
@@ -68,13 +69,18 @@ const Home = () => {
                   Stay up-to-date with all campus activities, get notified about events you're interested in, and manage your event calendar in one place.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
+              {/* Button Row with Google Sign In */}
+              <div className="flex flex-col gap-2 min-[400px]:flex-row items-center">
                 <Button size="lg" asChild>
                   <Link to="/events">Browse Events</Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/register">Create Account</Link>
                 </Button>
+                {/* Google Sign In Button */}
+                <div>
+                  <GoogleSignInButton />
+                </div>
               </div>
             </div>
             <img
@@ -192,3 +198,4 @@ const Home = () => {
 };
 
 export default Home;
+

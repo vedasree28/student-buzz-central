@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +88,7 @@ const EventCard = ({ event, showActions = true }: EventCardProps) => {
             <span>{formatDate(event.startDate)}</span>
           </div>
           
-          {(status === 'upcoming' || status === 'ongoing') && (
+          {status !== 'past' && (
             <div className="flex items-center">
               <Clock className="mr-2 h-4 w-4" />
               <span>

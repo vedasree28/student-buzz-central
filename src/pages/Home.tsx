@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import EventCard from '@/components/EventCard';
@@ -47,7 +48,7 @@ const Home = () => {
               <span className="text-blue-600">Discover</span> Campus Events Effortlessly
             </h1>
             <p className="text-lg text-muted-foreground mb-6">
-              Stay informed, register for events, and never miss out on campus buzz again. Whether academic, social, or career—there’s something for everyone!
+              Stay informed, register for events, and never miss out on campus buzz again. Whether academic, social, or career—there's something for everyone!
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               {!isAuthenticated && (
@@ -58,15 +59,13 @@ const Home = () => {
                   <Button size="lg" asChild>
                     <Link to="/register">Create Account</Link>
                   </Button>
-                  <div>
-                    <GoogleSignInButton />
-                  </div>
+                  <GoogleSignInButton />
                 </>
               )}
             </div>
           </div>
           <img
-            src={'/placeholder.svg'}
+            src="/placeholder.svg"
             alt="Event"
             className="w-[380px] rounded-xl border shadow"
           />

@@ -5,10 +5,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Mail, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const UserProfilePopover = () => {
   const { user } = useAuth();
   const { events, userRegistrations } = useEvents();
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
+  };
 
   const registeredEvents = events.filter(event =>
     userRegistrations.includes(event.id)
@@ -17,10 +26,12 @@ const UserProfilePopover = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100">
-            <User className="h-5 w-5 text-purple-600" />
-          </div>
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+          <Avatar>
+            <AvatarFallback className="bg-primary/10">
+              {user?.name ? getInitials(user.name) : <User className="h-5 w-5" />}
+            </AvatarFallback>
+          </Avatar>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-4" align="end">

@@ -75,7 +75,7 @@ const EventCard = ({ event, showActions = true }: EventCardProps) => {
       registerForEvent(event.id, user.id);
     }
   };
-  
+
   return (
     <div className="event-card flex flex-col h-full">
       <div className="relative h-48 w-full">

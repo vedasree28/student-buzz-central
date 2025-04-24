@@ -18,20 +18,20 @@ const Home = () => {
     const now = new Date();
 
     const upcoming = events
-      .filter(event => new Date(event.startDate) > now)
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      .filter(event => new Date(event.start_date) > now)
+      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
     const ongoing = events
       .filter(event => {
-        const start = new Date(event.startDate);
-        const end = new Date(event.endDate);
+        const start = new Date(event.start_date);
+        const end = new Date(event.end_date);
         return start <= now && end >= now;
       })
-      .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+      .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
 
     const past = events
-      .filter(event => new Date(event.endDate) < now)
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      .filter(event => new Date(event.end_date) < now)
+      .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
 
     setUpcomingEvents(upcoming);
     setOngoingEvents(ongoing);

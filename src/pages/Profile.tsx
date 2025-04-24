@@ -29,8 +29,8 @@ const Profile = () => {
   );
 
   // Separate into On Campus and Off Campus
-  const onCampusEvents = registeredEvents.filter(ev => ev.campusType === "on");
-  const offCampusEvents = registeredEvents.filter(ev => ev.campusType === "off");
+  const onCampusEvents = registeredEvents.filter(ev => ev.campus_type === "on");
+  const offCampusEvents = registeredEvents.filter(ev => ev.campus_type === "off");
 
   return (
     <div className="container py-8">
@@ -88,4 +88,3 @@ const Profile = () => {
 };
 
 export default Profile;
-

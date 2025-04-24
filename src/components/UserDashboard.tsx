@@ -16,15 +16,15 @@ const UserDashboard = () => {
   
   // Filter upcoming registered events
   const upcomingRegisteredEvents = registeredEvents.filter(event => getEventStatus(event) === 'upcoming')
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
   
   // Filter ongoing registered events
   const ongoingRegisteredEvents = registeredEvents.filter(event => getEventStatus(event) === 'ongoing')
-    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+    .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
   
   // Filter past registered events
   const pastRegisteredEvents = registeredEvents.filter(event => getEventStatus(event) === 'past')
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
   
   return (
     <div className="container py-8">

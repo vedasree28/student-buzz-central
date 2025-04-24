@@ -41,13 +41,13 @@ const Events = () => {
   });
   
   const upcomingEvents = filteredEvents.filter(event => getEventStatus(event) === 'upcoming')
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
   
   const ongoingEvents = filteredEvents.filter(event => getEventStatus(event) === 'ongoing')
-    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+    .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
   
   const pastEvents = filteredEvents.filter(event => getEventStatus(event) === 'past')
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
   
   const categories: { value: EventCategory | 'all'; label: string }[] = [
     { value: 'all', label: 'All Categories' },

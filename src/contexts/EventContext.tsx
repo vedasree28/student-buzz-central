@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { toast } from "sonner";
 
@@ -13,10 +14,10 @@ export type EventType = {
   description: string;
   category: EventCategory;
   location: string;
-  campusType: CampusType;
-  startDate: string;
-  endDate: string;
-  imageUrl: string;
+  campus_type: CampusType;
+  start_date: string;
+  end_date: string;
+  image_url: string;
   organizer: string;
   capacity: number;
   registeredUsers: string[]; // array of user IDs
@@ -41,10 +42,10 @@ const INITIAL_EVENTS: EventType[] = [
     description: 'Welcome event for new students to get familiar with campus resources, meet faculty, and connect with peers.',
     category: 'academic',
     location: 'Main Auditorium',
-    campusType: 'on',
-    startDate: '2025-06-10T09:00:00Z',
-    endDate: '2025-06-10T14:00:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c',
+    campus_type: 'on',
+    start_date: '2025-06-10T09:00:00Z',
+    end_date: '2025-06-10T14:00:00Z',
+    image_url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c',
     organizer: 'Student Affairs Office',
     capacity: 300,
     registeredUsers: ['2'],
@@ -55,10 +56,10 @@ const INITIAL_EVENTS: EventType[] = [
     description: 'Annual career fair with representatives from top companies across various industries.',
     category: 'career',
     location: 'University Center',
-    campusType: 'on',
-    startDate: '2025-05-15T10:00:00Z',
-    endDate: '2025-05-15T16:00:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f',
+    campus_type: 'on',
+    start_date: '2025-05-15T10:00:00Z',
+    end_date: '2025-05-15T16:00:00Z',
+    image_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f',
     organizer: 'Career Services',
     capacity: 500,
     registeredUsers: [],
@@ -69,10 +70,10 @@ const INITIAL_EVENTS: EventType[] = [
     description: 'Annual spring concert featuring popular artists and student performances.',
     category: 'arts',
     location: 'Campus Stadium',
-    campusType: 'off',
-    startDate: '2025-04-20T18:00:00Z',
-    endDate: '2025-04-20T22:00:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b',
+    campus_type: 'off',
+    start_date: '2025-04-20T18:00:00Z',
+    end_date: '2025-04-20T22:00:00Z',
+    image_url: 'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b',
     organizer: 'Student Activities Board',
     capacity: 2000,
     registeredUsers: [],
@@ -83,10 +84,10 @@ const INITIAL_EVENTS: EventType[] = [
     description: '48-hour event where students collaborate on innovative tech projects and compete for prizes.',
     category: 'academic',
     location: 'Technology Building',
-    campusType: 'on',
-    startDate: '2025-03-05T17:00:00Z',
-    endDate: '2025-03-07T17:00:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085',
+    campus_type: 'on',
+    start_date: '2025-03-05T17:00:00Z',
+    end_date: '2025-03-07T17:00:00Z',
+    image_url: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085',
     organizer: 'Computer Science Department',
     capacity: 150,
     registeredUsers: ['2'],
@@ -211,8 +212,8 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getEventStatus = (event: EventType): EventStatus => {
     const now = new Date().getTime();
-    const startTime = new Date(event.startDate).getTime();
-    const endTime = new Date(event.endDate).getTime();
+    const startTime = new Date(event.start_date).getTime();
+    const endTime = new Date(event.end_date).getTime();
     
     if (now < startTime) return 'upcoming';
     if (now > endTime) return 'past';

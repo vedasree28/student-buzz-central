@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,7 +126,21 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
   };
   
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM d, yyyy • h:mm a');
+    try {
+      if (!dateString) {
+        return "Date unavailable";
+      }
+      // Ensure we have a valid date string
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date:", dateString);
+        return "Invalid date";
+      }
+      return format(date, 'MMM d, yyyy • h:mm a');
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Date error";
+    }
   };
   
   const getStatusColor = (status: EventStatus) => {
@@ -193,8 +208,8 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
               <Clock className="mr-2 h-4 w-4" />
               <span>
                 {status === 'ongoing'
-                  ? `Ends ${format(new Date(event.end_date), 'h:mm a')}`
-                  : `Duration ${format(new Date(event.start_date), 'h:mm a')} - ${format(new Date(event.end_date), 'h:mm a')}`}
+                  ? `Ends ${formatDate(event.end_date).split('•')[1]}`
+                  : `Duration ${formatDate(event.start_date).split('•')[1]} - ${formatDate(event.end_date).split('•')[1]}`}
               </span>
             </div>
           )}

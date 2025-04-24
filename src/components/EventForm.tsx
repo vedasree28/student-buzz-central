@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -53,22 +54,26 @@ const EventForm = ({ mode }: EventFormProps) => {
       const eventToEdit = events.find(e => e.id === id);
       if (eventToEdit) {
         setTitle(eventToEdit.title);
-        setDescription(eventToEdit.description);
-        setCategory(eventToEdit.category);
+        setDescription(eventToEdit.description || '');
+        setCategory(eventToEdit.category as EventCategory);
         setLocation(eventToEdit.location);
         setOrganizer(eventToEdit.organizer);
         setCapacity(eventToEdit.capacity);
-        setImageUrl(eventToEdit.imageUrl);
-        setCampusType(eventToEdit.campusType || 'on');
+        setImageUrl(eventToEdit.image_url || '');
+        setCampusType(eventToEdit.campus_type as CampusType);
         
         // Parse dates and times
-        const startDateTime = new Date(eventToEdit.startDate);
-        const endDateTime = new Date(eventToEdit.endDate);
-        
-        setStartDate(format(startDateTime, 'yyyy-MM-dd'));
-        setStartTime(format(startDateTime, 'HH:mm'));
-        setEndDate(format(endDateTime, 'yyyy-MM-dd'));
-        setEndTime(format(endDateTime, 'HH:mm'));
+        try {
+          const startDateTime = new Date(eventToEdit.start_date);
+          const endDateTime = new Date(eventToEdit.end_date);
+          
+          setStartDate(format(startDateTime, 'yyyy-MM-dd'));
+          setStartTime(format(startDateTime, 'HH:mm'));
+          setEndDate(format(endDateTime, 'yyyy-MM-dd'));
+          setEndTime(format(endDateTime, 'HH:mm'));
+        } catch (error) {
+          console.error("Error parsing dates:", error);
+        }
       }
     }
   }, [mode, id, events]);
@@ -86,10 +91,10 @@ const EventForm = ({ mode }: EventFormProps) => {
         description,
         category,
         location,
-        campusType,
-        startDate: startDateTime,
-        endDate: endDateTime,
-        imageUrl,
+        campus_type: campusType,
+        start_date: startDateTime,
+        end_date: endDateTime,
+        image_url: imageUrl,
         organizer,
         capacity,
       });
@@ -100,10 +105,10 @@ const EventForm = ({ mode }: EventFormProps) => {
         description,
         category,
         location,
-        campusType,
-        startDate: startDateTime,
-        endDate: endDateTime,
-        imageUrl,
+        campus_type: campusType,
+        start_date: startDateTime,
+        end_date: endDateTime,
+        image_url: imageUrl,
         organizer,
         capacity,
       });

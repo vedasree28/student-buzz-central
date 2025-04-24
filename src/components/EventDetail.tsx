@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEvents, EventType } from '@/contexts/EventContext';
@@ -45,7 +46,12 @@ const EventDetail = () => {
   }
   
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM d, yyyy • h:mm a');
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy • h:mm a');
+    } catch (error) {
+      console.error("Error formatting date:", dateString, error);
+      return "Date unavailable";
+    }
   };
 
   const isRegistered = userRegistrations.includes(event.id);
@@ -100,7 +106,7 @@ const EventDetail = () => {
             <div className="flex flex-wrap gap-2 items-center">
               {getStatusBadge()}
               <Badge className="bg-purple-500">{event.category}</Badge>
-              {getCampusTypeBadge(event.campusType)}
+              {getCampusTypeBadge(event.campus_type)}
             </div>
             <h1 className="text-3xl font-bold">{event.title}</h1>
             <p className="text-muted-foreground">{event.description}</p>
@@ -112,7 +118,7 @@ const EventDetail = () => {
               <div>
                 <p className="font-medium">Date & Time</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(event.startDate)}
+                  {formatDate(event.start_date)}
                 </p>
               </div>
             </div>
@@ -122,7 +128,7 @@ const EventDetail = () => {
               <div>
                 <p className="font-medium">Duration</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(event.endDate)}
+                  {formatDate(event.end_date)}
                 </p>
               </div>
             </div>
@@ -161,7 +167,7 @@ const EventDetail = () => {
         <div className="bg-gray-50 p-6 rounded-lg h-fit space-y-6">
           <div className="aspect-video rounded-md overflow-hidden">
             <img 
-              src={event.imageUrl} 
+              src={event.image_url} 
               alt={event.title}
               className="w-full h-full object-cover"
             />

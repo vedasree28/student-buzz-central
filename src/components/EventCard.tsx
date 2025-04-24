@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, Home, MapPinOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect } from 'react';
@@ -53,12 +53,18 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
   
   const getEventStatus = (event: EventType): EventStatus => {
     const now = new Date().getTime();
-    const startTime = new Date(event.start_date).getTime();
-    const endTime = new Date(event.end_date).getTime();
     
-    if (now < startTime) return 'upcoming';
-    if (now > endTime) return 'past';
-    return 'ongoing';
+    try {
+      const startTime = new Date(event.start_date).getTime();
+      const endTime = new Date(event.end_date).getTime();
+      
+      if (now < startTime) return 'upcoming';
+      if (now > endTime) return 'past';
+      return 'ongoing';
+    } catch (error) {
+      console.error("Error determining event status:", error);
+      return 'upcoming'; // Default fallback
+    }
   };
   
   // Check if user is registered for this event
@@ -130,12 +136,13 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
       if (!dateString) {
         return "Date unavailable";
       }
-      // Ensure we have a valid date string
+      
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
+      if (!isValid(date)) {
         console.error("Invalid date:", dateString);
         return "Invalid date";
       }
+      
       return format(date, 'MMM d, yyyy • h:mm a');
     } catch (error) {
       console.error("Date formatting error:", error);
@@ -180,6 +187,9 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
           src={event.image_url} 
           alt={event.title} 
           className="h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder.svg";
+          }}
         />
         <div className="absolute top-2 right-2 flex flex-col gap-2">
           <Badge variant="secondary" className={getStatusColor(status)}>

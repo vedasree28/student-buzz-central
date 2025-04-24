@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import EventCard from '@/components/EventCard';
@@ -18,20 +17,58 @@ const Home = () => {
     const now = new Date();
 
     const upcoming = events
-      .filter(event => new Date(event.start_date) > now)
-      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+      .filter(event => {
+        try {
+          return new Date(event.start_date) > now;
+        } catch (e) {
+          console.error("Error parsing start date:", event.start_date, e);
+          return false;
+        }
+      })
+      .sort((a, b) => {
+        try {
+          return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+        } catch (e) {
+          console.error("Error sorting dates:", e);
+          return 0;
+        }
+      });
 
     const ongoing = events
       .filter(event => {
-        const start = new Date(event.start_date);
-        const end = new Date(event.end_date);
-        return start <= now && end >= now;
+        try {
+          const start = new Date(event.start_date);
+          const end = new Date(event.end_date);
+          return start <= now && end >= now;
+        } catch (e) {
+          console.error("Error parsing dates for ongoing events:", e);
+          return false;
+        }
       })
-      .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
+      .sort((a, b) => {
+        try {
+          return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+        } catch (e) {
+          return 0;
+        }
+      });
 
     const past = events
-      .filter(event => new Date(event.end_date) < now)
-      .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+      .filter(event => {
+        try {
+          return new Date(event.end_date) < now;
+        } catch (e) {
+          console.error("Error parsing end date:", event.end_date, e);
+          return false;
+        }
+      })
+      .sort((a, b) => {
+        try {
+          return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+        } catch (e) {
+          return 0;
+        }
+      });
 
     setUpcomingEvents(upcoming);
     setOngoingEvents(ongoing);

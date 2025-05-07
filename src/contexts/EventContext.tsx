@@ -1,6 +1,7 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export type EventCategory = 'academic' | 'social' | 'career' | 'sports' | 'arts' | 'other';
 
@@ -32,6 +33,7 @@ type EventContextType = {
   registerForEvent: (eventId: string, userId: string) => void;
   unregisterFromEvent: (eventId: string, userId: string) => void;
   getEventStatus: (event: EventType) => EventStatus;
+  refreshEvents: () => Promise<void>; // Added new function to manually refresh events
 };
 
 // Sample event data
@@ -109,6 +111,59 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
     return savedRegistrations ? JSON.parse(savedRegistrations) : ['1', '4'];
   });
 
+  // Add effect to fetch events from Supabase on component mount
+  useEffect(() => {
+    refreshEvents();
+    
+    // Set up real-time subscription for events changes
+    const channel = supabase
+      .channel('public:events')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'events' }, 
+        (payload) => {
+          console.log('Real-time event update:', payload);
+          refreshEvents(); // Refresh all events when any change occurs
+          toast.info("Event information updated");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Function to fetch events from Supabase
+  const refreshEvents = async () => {
+    try {
+      // First try to fetch from Supabase
+      const { data, error } = await supabase
+        .from('events')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching events:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        // Convert Supabase data to match our EventType structure
+        const formattedEvents: EventType[] = data.map(event => ({
+          ...event,
+          registeredUsers: event.registeredUsers || []
+        }));
+        
+        setEvents(formattedEvents);
+        saveEvents(formattedEvents);
+        console.log('Fetched events from Supabase:', formattedEvents);
+      } else {
+        console.log('No events found in Supabase, using initial or localStorage data');
+      }
+    } catch (error) {
+      console.error('Error in refreshEvents:', error);
+    }
+  };
+
   const saveEvents = (updatedEvents: EventType[]) => {
     setEvents(updatedEvents);
     localStorage.setItem('events', JSON.stringify(updatedEvents));
@@ -126,88 +181,157 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
       registeredUsers: [],
     };
     
-    const updatedEvents = [...events, newEvent];
-    saveEvents(updatedEvents);
-    toast.success('Event added successfully!');
+    // Try to add to Supabase first
+    supabase
+      .from('events')
+      .insert([{
+        ...event,
+        registeredUsers: []
+      }])
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error adding event to Supabase:', error);
+          
+          // Fallback: Add to local storage if Supabase fails
+          const updatedEvents = [...events, newEvent];
+          saveEvents(updatedEvents);
+        }
+        // Success is handled by the real-time subscription
+        toast.success('Event added successfully!');
+      });
   };
 
   const updateEvent = (
     id: string,
     updatedFields: Partial<Omit<EventType, 'id' | 'registeredUsers'>>
   ) => {
-    const updatedEvents = events.map((event) =>
-      event.id === id ? { ...event, ...updatedFields } : event
-    );
-    
-    saveEvents(updatedEvents);
-    toast.success('Event updated successfully!');
+    // First update in Supabase
+    supabase
+      .from('events')
+      .update(updatedFields)
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error updating event in Supabase:', error);
+          
+          // Fallback: Update in local storage if Supabase fails
+          const updatedEvents = events.map((event) =>
+            event.id === id ? { ...event, ...updatedFields } : event
+          );
+          saveEvents(updatedEvents);
+        }
+        // Success is handled by the real-time subscription
+        toast.success('Event updated successfully!');
+      });
   };
 
   const deleteEvent = (id: string) => {
-    const updatedEvents = events.filter(event => event.id !== id);
-    saveEvents(updatedEvents);
-    
-    // Also remove from user registrations if present
-    if (userRegistrations.includes(id)) {
-      const updatedRegistrations = userRegistrations.filter(eventId => eventId !== id);
-      saveUserRegistrations(updatedRegistrations);
-    }
-    
-    toast.success('Event deleted successfully!');
+    // First delete from Supabase
+    supabase
+      .from('events')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error deleting event from Supabase:', error);
+          
+          // Fallback: Delete from local storage if Supabase fails
+          const updatedEvents = events.filter(event => event.id !== id);
+          saveEvents(updatedEvents);
+        }
+        
+        // Also remove from user registrations if present
+        if (userRegistrations.includes(id)) {
+          const updatedRegistrations = userRegistrations.filter(eventId => eventId !== id);
+          saveUserRegistrations(updatedRegistrations);
+        }
+        
+        // Success is handled by the real-time subscription
+        toast.success('Event deleted successfully!');
+      });
   };
 
   const registerForEvent = (eventId: string, userId: string) => {
-    // Update the event's registeredUsers
-    const updatedEvents = events.map(event => {
-      if (event.id === eventId) {
-        // Check if reached capacity
-        if (event.registeredUsers.length >= event.capacity) {
-          toast.error('This event has reached capacity');
-          return event;
-        }
-        
-        // Don't add if already registered
-        if (event.registeredUsers.includes(userId)) {
-          toast.info('You are already registered for this event');
-          return event;
-        }
-        
-        return {
-          ...event,
-          registeredUsers: [...event.registeredUsers, userId],
-        };
-      }
-      return event;
-    });
+    // Find the event to check capacity
+    const event = events.find(e => e.id === eventId);
     
-    saveEvents(updatedEvents);
-    
-    // Also update user registrations
-    if (!userRegistrations.includes(eventId)) {
-      const updatedRegistrations = [...userRegistrations, eventId];
-      saveUserRegistrations(updatedRegistrations);
-      toast.success('Registration successful!');
+    if (!event) {
+      toast.error('Event not found');
+      return;
     }
+    
+    // Check if reached capacity
+    if (event.registeredUsers.length >= event.capacity) {
+      toast.error('This event has reached capacity');
+      return;
+    }
+    
+    // Don't add if already registered
+    if (event.registeredUsers.includes(userId)) {
+      toast.info('You are already registered for this event');
+      return;
+    }
+    
+    // First update in Supabase
+    supabase
+      .from('event_registrations')
+      .insert([{ event_id: eventId, user_id: userId }])
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error registering for event in Supabase:', error);
+          
+          // Fallback: Update in local storage if Supabase fails
+          const updatedEvents = events.map(event => {
+            if (event.id === eventId) {
+              return {
+                ...event,
+                registeredUsers: [...event.registeredUsers, userId],
+              };
+            }
+            return event;
+          });
+          saveEvents(updatedEvents);
+          
+          // Also update user registrations
+          if (!userRegistrations.includes(eventId)) {
+            const updatedRegistrations = [...userRegistrations, eventId];
+            saveUserRegistrations(updatedRegistrations);
+          }
+        }
+        
+        toast.success('Registration successful!');
+      });
   };
 
   const unregisterFromEvent = (eventId: string, userId: string) => {
-    // Update the event's registeredUsers
-    const updatedEvents = events.map(event => {
-      if (event.id === eventId) {
-        return {
-          ...event,
-          registeredUsers: event.registeredUsers.filter(id => id !== userId),
-        };
-      }
-      return event;
-    });
-    
-    saveEvents(updatedEvents);
-    
-    // Also update user registrations
-    const updatedRegistrations = userRegistrations.filter(id => id !== eventId);
-    saveUserRegistrations(updatedRegistrations);
-    toast.info('You have been unregistered from this event');
+    // First update in Supabase
+    supabase
+      .from('event_registrations')
+      .delete()
+      .match({ event_id: eventId, user_id: userId })
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error unregistering from event in Supabase:', error);
+          
+          // Fallback: Update in local storage if Supabase fails
+          const updatedEvents = events.map(event => {
+            if (event.id === eventId) {
+              return {
+                ...event,
+                registeredUsers: event.registeredUsers.filter(id => id !== userId),
+              };
+            }
+            return event;
+          });
+          saveEvents(updatedEvents);
+        }
+        
+        // Also update user registrations
+        const updatedRegistrations = userRegistrations.filter(id => id !== eventId);
+        saveUserRegistrations(updatedRegistrations);
+        
+        toast.info('You have been unregistered from this event');
+      });
   };
 
   const getEventStatus = (event: EventType): EventStatus => {
@@ -231,6 +355,7 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
         registerForEvent,
         unregisterFromEvent,
         getEventStatus,
+        refreshEvents,
       }}
     >
       {children}

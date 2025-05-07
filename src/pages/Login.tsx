@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from 'lucide-react';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 const Login = () => {
   const { login } = useAuth();
@@ -85,7 +86,22 @@ const Login = () => {
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
               
-              <div className="mt-4 text-center text-sm">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+              
+              <div className="grid">
+                <GoogleSignInButton />
+              </div>
+              
+              <div className="text-center text-sm">
                 Don't have an account?{' '}
                 <Link to="/register" className="text-blue-600 hover:text-blue-800">
                   Sign up

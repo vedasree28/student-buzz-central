@@ -1,17 +1,13 @@
-import { supabase } from '../../supabase/supabaseClient'
+
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GoogleSignInButton() {
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-    })
-    if (error) console.error('Login failed:', error.message)
-  }
+  const { handleGoogleLogin } = useAuth();
 
   return (
     <button
       onClick={handleGoogleLogin}
-      className="bg-white text-black border border-gray-300 rounded-lg px-6 py-2 shadow-sm flex items-center gap-2 hover:shadow-md transition"
+      className="bg-white text-black border border-gray-300 rounded-lg px-6 py-2 shadow-sm flex items-center justify-center gap-2 hover:shadow-md transition w-full"
     >
       <img
         src="https://www.svgrepo.com/show/475656/google-color.svg"

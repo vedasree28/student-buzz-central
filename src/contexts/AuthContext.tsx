@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 type User = {
   id: string;
@@ -16,6 +17,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  handleGoogleLogin?: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,6 +51,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(JSON.parse(storedUser));
     }
     setIsLoading(false);
+
+    // Also check for Supabase Auth session
+    const checkSupabaseSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        const email = data.session.user.email;
+        if (email) {
+          // Check if it's one of our mock users
+          const mockUser = MOCK_USERS.find(u => u.email === email);
+          if (mockUser) {
+            const { password: _, ...userWithoutPassword } = mockUser;
+            setUser(userWithoutPassword);
+            localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+          } else {
+            // Create a new user object for Supabase user
+            const newUser = {
+              id: data.session.user.id,
+              name: email.split('@')[0], // Use part of email as name
+              email: email,
+              role: 'user' as const,
+            };
+            setUser(newUser);
+            localStorage.setItem('user', JSON.stringify(newUser));
+          }
+        }
+      }
+      setIsLoading(false);
+    };
+    
+    checkSupabaseSession();
+    
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const email = session.user.email;
+          if (email) {
+            // Check if it's one of our mock users
+            const mockUser = MOCK_USERS.find(u => u.email === email);
+            if (mockUser) {
+              const { password: _, ...userWithoutPassword } = mockUser;
+              setUser(userWithoutPassword);
+              localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+            } else {
+              // Create a new user object for Supabase user
+              const newUser = {
+                id: session.user.id,
+                name: email.split('@')[0], // Use part of email as name
+                email: email,
+                role: 'user' as const,
+              };
+              setUser(newUser);
+              localStorage.setItem('user', JSON.stringify(newUser));
+            }
+            toast.success(`Welcome back, ${email.split('@')[0]}!`);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          localStorage.removeItem('user');
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -114,9 +182,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast.info('You have been logged out');
+    supabase.auth.signOut().then(() => {
+      setUser(null);
+      localStorage.removeItem('user');
+      toast.info('You have been logged out');
+    });
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+      
+      if (error) {
+        console.error('Google login failed:', error.message);
+        toast.error(`Google login failed: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error('Google login failed. Please try again.');
+    }
   };
 
   return (
@@ -128,6 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        handleGoogleLogin,
       }}
     >
       {children}

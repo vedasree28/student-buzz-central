@@ -5,6 +5,8 @@ import { useEvents } from '@/contexts/EventContext';
 import { Button } from "@/components/ui/button";
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Home = () => {
   const { events, getEventStatus } = useEvents();
@@ -74,6 +76,41 @@ const Home = () => {
     setOngoingEvents(ongoing);
     setPastEvents(past);
   }, [events]);
+
+  // Subscribe to real-time events changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:events')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'events' }, 
+        (payload) => {
+          console.log('Real-time event update:', payload);
+          toast.info("Event information updated");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Subscribe to real-time registration changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:event_registrations')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'event_registrations' }, 
+        (payload) => {
+          console.log('Real-time registration update:', payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div>

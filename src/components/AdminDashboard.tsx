@@ -1,4 +1,3 @@
-
 import { useEvents } from '@/contexts/EventContext';
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
@@ -153,7 +152,7 @@ const AdminDashboard = () => {
                         {event.title}
                       </Link>
                     </TableCell>
-                    <TableCell>{formatDate(event.startDate)}</TableCell>
+                    <TableCell>{formatDate(event.start_date)}</TableCell>
                     <TableCell className="capitalize">{event.category}</TableCell>
                     <TableCell>
                       <Badge

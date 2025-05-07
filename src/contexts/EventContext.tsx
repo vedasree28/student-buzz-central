@@ -148,20 +148,37 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (data && data.length > 0) {
         // Convert Supabase data to match our EventType structure
-        const formattedEvents: EventType[] = data.map(event => ({
-          id: event.id,
-          title: event.title,
-          description: event.description || '',
-          category: event.category as EventCategory,
-          location: event.location,
-          campus_type: event.campus_type as CampusType,
-          start_date: event.start_date,
-          end_date: event.end_date,
-          image_url: event.image_url || '',
-          organizer: event.organizer,
-          capacity: event.capacity,
-          registeredUsers: event.registeredUsers || []
-        }));
+        const formattedEvents: EventType[] = data.map(event => {
+          // Handle the UUID[] to string[] conversion for registeredUsers
+          let registeredUsers: string[] = [];
+          if (event.registeredUsers) {
+            // Check if registeredUsers is an array or a string representation of an array
+            if (typeof event.registeredUsers === 'string') {
+              try {
+                registeredUsers = JSON.parse(event.registeredUsers);
+              } catch (e) {
+                console.error('Error parsing registeredUsers:', e);
+              }
+            } else if (Array.isArray(event.registeredUsers)) {
+              registeredUsers = event.registeredUsers.map(id => String(id));
+            }
+          }
+          
+          return {
+            id: event.id,
+            title: event.title,
+            description: event.description || '',
+            category: event.category as EventCategory,
+            location: event.location,
+            campus_type: event.campus_type as CampusType,
+            start_date: event.start_date,
+            end_date: event.end_date,
+            image_url: event.image_url || '',
+            organizer: event.organizer,
+            capacity: event.capacity,
+            registeredUsers: registeredUsers
+          };
+        });
         
         setEvents(formattedEvents);
         saveEvents(formattedEvents);

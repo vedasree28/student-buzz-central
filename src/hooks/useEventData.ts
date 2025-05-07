@@ -55,34 +55,100 @@ export const useEventData = () => {
     }
   };
 
+  // Function to fetch user registrations from Supabase
+  const refreshUserRegistrations = async (userId: string) => {
+    if (!userId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .select('event_id')
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Error fetching user registrations:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const registrationsArray = data.map(registration => registration.event_id);
+        saveUserRegistrations(registrationsArray);
+        console.log('Fetched user registrations:', registrationsArray);
+      }
+    } catch (error) {
+      console.error('Error in refreshUserRegistrations:', error);
+    }
+  };
+
   // Set up real-time subscription for events changes
   useEffect(() => {
     refreshEvents();
     
-    const channel = supabase
-      .channel('public:events')
+    // Subscribe to real-time updates for events
+    const eventsChannel = supabase
+      .channel('events_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'events' }, 
         (payload) => {
           console.log('Real-time event update:', payload);
-          refreshEvents(); // Refresh all events when any change occurs
-          toast.info("Event information updated");
+          
+          // Handle different types of events
+          if (payload.eventType === 'INSERT') {
+            const newEvent = formatEventFromSupabase(payload.new);
+            setEvents(currentEvents => [...currentEvents, newEvent]);
+            toast.info(`New event added: ${newEvent.title}`);
+          } 
+          else if (payload.eventType === 'UPDATE') {
+            const updatedEvent = formatEventFromSupabase(payload.new);
+            setEvents(currentEvents => 
+              currentEvents.map(event => event.id === updatedEvent.id ? updatedEvent : event)
+            );
+            toast.info(`Event updated: ${updatedEvent.title}`);
+          } 
+          else if (payload.eventType === 'DELETE') {
+            const deletedEventId = payload.old.id;
+            setEvents(currentEvents => 
+              currentEvents.filter(event => event.id !== deletedEventId)
+            );
+            toast.info("An event has been removed");
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to real-time updates for event registrations
+    const registrationsChannel = supabase
+      .channel('registrations_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'event_registrations' },
+        (payload) => {
+          console.log('Real-time registration update:', payload);
+          
+          // Refresh events to get updated registration counts
+          refreshEvents();
+          
+          if (payload.eventType === 'INSERT') {
+            toast.success("New registration recorded");
+          } else if (payload.eventType === 'DELETE') {
+            toast.info("Registration removed");
+          }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      // Clean up subscriptions
+      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(registrationsChannel);
     };
   }, []);
 
   return {
     events,
-    setEvents,
     userRegistrations,
-    setUserRegistrations,
     saveEvents,
     saveUserRegistrations,
-    refreshEvents
+    refreshEvents,
+    refreshUserRegistrations
   };
 };

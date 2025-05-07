@@ -1,19 +1,22 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { EventType, EventContextType } from '@/types/eventTypes';
 import { useEventData } from '@/hooks/useEventData';
 import { useEventOperations } from '@/hooks/useEventOperations';
 import { getEventStatus } from '@/utils/eventUtils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
 export const EventProvider = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
   const {
     events,
     userRegistrations,
     saveEvents,
     saveUserRegistrations,
-    refreshEvents
+    refreshEvents,
+    refreshUserRegistrations
   } = useEventData();
 
   const {
@@ -28,6 +31,13 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
     saveEvents,
     saveUserRegistrations
   });
+
+  // Fetch user-specific registrations whenever the user changes
+  useEffect(() => {
+    if (user) {
+      refreshUserRegistrations(user.id);
+    }
+  }, [user]);
 
   return (
     <EventContext.Provider

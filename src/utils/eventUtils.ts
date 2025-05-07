@@ -72,23 +72,30 @@ export const getEventStatus = (event: EventType): EventStatus => {
 };
 
 export const formatEventFromSupabase = (event: any): EventType => {
-  // Handle the UUID[] to string[] conversion for registeredUsers
+  // Get registration count from Supabase or use the registeredUsers array if it exists
   let registeredUsers: string[] = [];
-  if (event.registeredUsers) {
-    // Check if registeredUsers is an array or a string representation of an array
-    if (typeof event.registeredUsers === 'string') {
-      try {
-        registeredUsers = JSON.parse(event.registeredUsers);
-      } catch (e) {
-        console.error('Error parsing registeredUsers:', e);
+
+  try {
+    if (event.registeredUsers) {
+      // If registeredUsers is already an array, use it
+      if (Array.isArray(event.registeredUsers)) {
+        registeredUsers = event.registeredUsers.map((id: any) => String(id));
+      } 
+      // If it's a JSON string, parse it
+      else if (typeof event.registeredUsers === 'string') {
+        try {
+          registeredUsers = JSON.parse(event.registeredUsers);
+        } catch (e) {
+          console.error('Error parsing registeredUsers:', e);
+        }
       }
-    } else if (Array.isArray(event.registeredUsers)) {
-      registeredUsers = event.registeredUsers.map((id: any) => String(id));
     }
+  } catch (error) {
+    console.error('Error processing registeredUsers:', error);
   }
   
   return {
-    id: event.id,
+    id: String(event.id), // Ensure ID is a string
     title: event.title,
     description: event.description || '',
     category: event.category,
@@ -101,4 +108,24 @@ export const formatEventFromSupabase = (event: any): EventType => {
     capacity: event.capacity,
     registeredUsers: registeredUsers
   };
+};
+
+// Helper function to fetch registration count for an event
+export const fetchEventRegistrationCount = async (eventId: string) => {
+  try {
+    const { data, error, count } = await supabase
+      .from('event_registrations')
+      .select('*', { count: 'exact' })
+      .eq('event_id', eventId);
+    
+    if (error) {
+      console.error('Error fetching registration count:', error);
+      return 0;
+    }
+    
+    return count || 0;
+  } catch (error) {
+    console.error('Error in fetchEventRegistrationCount:', error);
+    return 0;
+  }
 };

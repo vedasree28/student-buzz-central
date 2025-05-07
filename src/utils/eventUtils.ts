@@ -1,6 +1,5 @@
 
 import { EventType, EventStatus } from '@/types/eventTypes';
-import { supabase } from '@/integrations/supabase/client';
 
 // Sample event data
 export const INITIAL_EVENTS: EventType[] = [

@@ -149,7 +149,17 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
       if (data && data.length > 0) {
         // Convert Supabase data to match our EventType structure
         const formattedEvents: EventType[] = data.map(event => ({
-          ...event,
+          id: event.id,
+          title: event.title,
+          description: event.description || '',
+          category: event.category as EventCategory,
+          location: event.location,
+          campus_type: event.campus_type as CampusType,
+          start_date: event.start_date,
+          end_date: event.end_date,
+          image_url: event.image_url || '',
+          organizer: event.organizer,
+          capacity: event.capacity,
           registeredUsers: event.registeredUsers || []
         }));
         
@@ -175,12 +185,6 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const addEvent = (event: Omit<EventType, 'id' | 'registeredUsers'>) => {
-    const newEvent: EventType = {
-      ...event,
-      id: Date.now().toString(),
-      registeredUsers: [],
-    };
-    
     // Try to add to Supabase first
     supabase
       .from('events')
@@ -193,6 +197,11 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
           console.error('Error adding event to Supabase:', error);
           
           // Fallback: Add to local storage if Supabase fails
+          const newEvent: EventType = {
+            ...event,
+            id: Date.now().toString(),
+            registeredUsers: [],
+          };
           const updatedEvents = [...events, newEvent];
           saveEvents(updatedEvents);
         }

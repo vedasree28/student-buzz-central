@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Calendar, LogOut, Menu, X, Mail } from 'lucide-react';
+import { Calendar, LogOut, Menu, X, Mail } from 'lucide-react';
 import UserProfilePopover from './UserProfilePopover';
+import NotificationsPopover from './NotificationsPopover';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -57,16 +58,13 @@ export const Navbar = () => {
                 <Mail size={16} className="text-blue-600" />
                 <span className="text-sm text-gray-700 font-medium">{user?.email}</span>
               </div>
-              <Button variant="ghost" size="icon" className="relative" asChild>
-                <Link to="/notifications">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                    3
-                  </span>
-                </Link>
-              </Button>
+              
+              {/* Notifications Bell */}
+              <NotificationsPopover />
+              
               {/* Profile popover */}
               <UserProfilePopover />
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full hidden">

@@ -2,8 +2,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 
-type User = {
+type UserProfile = {
   id: string;
   name: string;
   email: string;
@@ -11,111 +12,84 @@ type User = {
 };
 
 type AuthContextType = {
-  user: User | null;
+  user: UserProfile | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   handleGoogleLogin?: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo purposes
-const MOCK_USERS = [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@campus.edu',
-    password: 'admin123',
-    role: 'admin' as const,
-  },
-  {
-    id: '2',
-    name: 'Student User',
-    email: 'student@campus.edu',
-    password: 'student123',
-    role: 'user' as const,
-  },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for stored user in localStorage on initial load
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+  // Fetch user profile from the profiles table
+  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, email, role')
+        .eq('id', userId)
+        .single();
 
-    // Also check for Supabase Auth session
-    const checkSupabaseSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user) {
-        const email = data.session.user.email;
-        if (email) {
-          // Check if it's one of our mock users
-          const mockUser = MOCK_USERS.find(u => u.email === email);
-          if (mockUser) {
-            const { password: _, ...userWithoutPassword } = mockUser;
-            setUser(userWithoutPassword);
-            localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-          } else {
-            // Create a new user object for Supabase user
-            const newUser = {
-              id: data.session.user.id,
-              name: email.split('@')[0], // Use part of email as name
-              email: email,
-              role: 'user' as const,
-            };
-            setUser(newUser);
-            localStorage.setItem('user', JSON.stringify(newUser));
-          }
-        }
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
       }
-      setIsLoading(false);
-    };
-    
-    checkSupabaseSession();
-    
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const email = session.user.email;
-          if (email) {
-            // Check if it's one of our mock users
-            const mockUser = MOCK_USERS.find(u => u.email === email);
-            if (mockUser) {
-              const { password: _, ...userWithoutPassword } = mockUser;
-              setUser(userWithoutPassword);
-              localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-            } else {
-              // Create a new user object for Supabase user
-              const newUser = {
-                id: session.user.id,
-                name: email.split('@')[0], // Use part of email as name
-                email: email,
-                role: 'user' as const,
-              };
-              setUser(newUser);
-              localStorage.setItem('user', JSON.stringify(newUser));
-            }
-            toast.success(`Welcome back, ${email.split('@')[0]}!`);
-          }
-        } else if (event === 'SIGNED_OUT') {
+
+      return data as UserProfile;
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
+
+        if (session?.user) {
+          // Fetch user profile when authenticated
+          const profile = await fetchUserProfile(session.user.id);
+          setUser(profile);
+        } else {
           setUser(null);
-          localStorage.removeItem('user');
         }
+        
+        setIsLoading(false);
       }
     );
 
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (session?.user) {
+        fetchUserProfile(session.user.id).then(profile => {
+          setSession(session);
+          setUser(profile);
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -123,25 +97,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Simulate API request delay
-      await new Promise(r => setTimeout(r, 1000));
-      
-      const foundUser = MOCK_USERS.find(u => u.email === email && u.password === password);
-      
-      if (!foundUser) {
-        throw new Error('Invalid credentials');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
       }
-      
-      const { password: _, ...userWithoutPassword } = foundUser;
-      
-      // Save user to state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      
-      toast.success(`Welcome back, ${userWithoutPassword.name}!`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Login failed');
-      throw error;
+
+      if (data.user) {
+        const profile = await fetchUserProfile(data.user.id);
+        setUser(profile);
+        setSession(data.session);
+        toast.success(`Welcome back!`);
+      }
+    } catch (error: any) {
+      const message = error?.message || 'Login failed';
+      toast.error(message);
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
@@ -151,48 +125,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Simulate API request delay
-      await new Promise(r => setTimeout(r, 1000));
-      
-      // Check if email is already taken
-      if (MOCK_USERS.some(u => u.email === email)) {
-        throw new Error('Email already in use');
-      }
-      
-      // In a real app, we would save to a database
-      // For demo, we'll just pretend it worked
-      const newUser = {
-        id: `${MOCK_USERS.length + 1}`,
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        role: 'user' as const,
-      };
-      
-      // Save user to state and localStorage
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      
-      toast.success('Registration successful!');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Registration failed');
-      throw error;
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: name,
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        toast.success('Registration successful! Please check your email to confirm your account.');
+      }
+    } catch (error: any) {
+      const message = error?.message || 'Registration failed';
+      toast.error(message);
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    supabase.auth.signOut().then(() => {
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+
       setUser(null);
-      localStorage.removeItem('user');
+      setSession(null);
       toast.info('You have been logged out');
-    });
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast.error('Error logging out');
+    }
   };
 
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
       });
       
       if (error) {
@@ -209,8 +192,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        session,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !!session,
         login,
         register,
         logout,

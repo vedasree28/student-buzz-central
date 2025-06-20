@@ -17,192 +17,166 @@ export const useEventOperations = ({
   saveEvents,
   saveUserRegistrations
 }: UseEventOperationsProps) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
-  const addEvent = (event: Omit<EventType, 'id' | 'registeredUsers'>) => {
+  const addEvent = async (event: Omit<EventType, 'id' | 'registeredUsers'>) => {
+    if (!isAuthenticated || !user) {
+      toast.error('You must be logged in to create events');
+      return;
+    }
+
+    if (user.role !== 'admin') {
+      toast.error('Only administrators can create events');
+      return;
+    }
+
     try {
-      // Add to Supabase - the real-time subscription will handle updating the UI
-      supabase
+      const { data, error } = await supabase
         .from('events')
-        .insert([{
-          ...event,
-          // Ensure we're not sending registeredUsers directly
-        }])
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error adding event to Supabase:', error);
-            toast.error('Failed to add event: ' + error.message);
-            
-            // Fallback: Add to local storage if Supabase fails
-            const newEvent: EventType = {
-              ...event,
-              id: Date.now().toString(),
-              registeredUsers: [],
-            };
-            const updatedEvents = [...events, newEvent];
-            saveEvents(updatedEvents);
-            toast.success('Event added locally (offline mode)');
-          } else {
-            // Success is handled by the real-time subscription
-            toast.success('Event added successfully!');
-          }
-        });
+        .insert([event])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding event:', error);
+        toast.error('Failed to add event: ' + error.message);
+        return;
+      }
+
+      toast.success('Event added successfully!');
     } catch (error) {
       console.error('Error in addEvent:', error);
       toast.error('An unexpected error occurred');
     }
   };
 
-  const updateEvent = (
+  const updateEvent = async (
     id: string,
     updatedFields: Partial<Omit<EventType, 'id' | 'registeredUsers'>>
   ) => {
+    if (!isAuthenticated || !user) {
+      toast.error('You must be logged in to update events');
+      return;
+    }
+
+    if (user.role !== 'admin') {
+      toast.error('Only administrators can update events');
+      return;
+    }
+
     try {
-      // First update in Supabase
-      supabase
+      const { error } = await supabase
         .from('events')
         .update(updatedFields)
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error updating event in Supabase:', error);
-            toast.error('Failed to update event: ' + error.message);
-            
-            // Fallback: Update in local storage if Supabase fails
-            const updatedEvents = events.map((event) =>
-              event.id === id ? { ...event, ...updatedFields } : event
-            );
-            saveEvents(updatedEvents);
-            toast.success('Event updated locally (offline mode)');
-          }
-          // Success is handled by the real-time subscription
-        });
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating event:', error);
+        toast.error('Failed to update event: ' + error.message);
+        return;
+      }
+
+      toast.success('Event updated successfully!');
     } catch (error) {
       console.error('Error in updateEvent:', error);
       toast.error('An unexpected error occurred');
     }
   };
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = async (id: string) => {
+    if (!isAuthenticated || !user) {
+      toast.error('You must be logged in to delete events');
+      return;
+    }
+
+    if (user.role !== 'admin') {
+      toast.error('Only administrators can delete events');
+      return;
+    }
+
     try {
-      // First delete from Supabase
-      supabase
+      const { error } = await supabase
         .from('events')
         .delete()
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error deleting event from Supabase:', error);
-            toast.error('Failed to delete event: ' + error.message);
-            
-            // Fallback: Delete from local storage if Supabase fails
-            const updatedEvents = events.filter(event => event.id !== id);
-            saveEvents(updatedEvents);
-            toast.success('Event deleted locally (offline mode)');
-          }
-          
-          // Also remove from user registrations if present
-          if (userRegistrations.includes(id)) {
-            const updatedRegistrations = userRegistrations.filter(eventId => eventId !== id);
-            saveUserRegistrations(updatedRegistrations);
-          }
-          
-          // Success is handled by the real-time subscription
-        });
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting event:', error);
+        toast.error('Failed to delete event: ' + error.message);
+        return;
+      }
+
+      toast.success('Event deleted successfully!');
     } catch (error) {
       console.error('Error in deleteEvent:', error);
       toast.error('An unexpected error occurred');
     }
   };
 
-  const registerForEvent = (eventId: string, userId: string) => {
+  const registerForEvent = async (eventId: string, userId: string) => {
+    if (!isAuthenticated || !user) {
+      toast.error('You must be logged in to register for events');
+      return;
+    }
+
     try {
-      // Find the event to check capacity
-      const event = events.find(e => e.id === eventId);
-      
-      if (!event) {
-        toast.error('Event not found');
+      // Check if already registered
+      const { data: existingRegistration, error: checkError } = await supabase
+        .from('event_registrations')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking registration:', checkError);
+        toast.error('Failed to check registration status');
         return;
       }
-      
-      // Check if reached capacity
-      if (event.registeredUsers.length >= event.capacity) {
-        toast.error('This event has reached capacity');
-        return;
-      }
-      
-      // Don't add if already registered
-      if (event.registeredUsers.includes(userId)) {
+
+      if (existingRegistration) {
         toast.info('You are already registered for this event');
         return;
       }
-      
-      // First update in Supabase
-      supabase
+
+      // Register for the event
+      const { error } = await supabase
         .from('event_registrations')
-        .insert([{ event_id: eventId, user_id: userId }])
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error registering for event in Supabase:', error);
-            toast.error('Failed to register for event: ' + error.message);
-            
-            // Fallback: Update in local storage if Supabase fails
-            const updatedEvents = events.map(event => {
-              if (event.id === eventId) {
-                return {
-                  ...event,
-                  registeredUsers: [...event.registeredUsers, userId],
-                };
-              }
-              return event;
-            });
-            saveEvents(updatedEvents);
-            
-            // Also update user registrations
-            if (!userRegistrations.includes(eventId)) {
-              const updatedRegistrations = [...userRegistrations, eventId];
-              saveUserRegistrations(updatedRegistrations);
-            }
-            
-            toast.success('Registration recorded locally (offline mode)');
-          }
-        });
+        .insert([{ event_id: eventId, user_id: userId }]);
+
+      if (error) {
+        console.error('Error registering for event:', error);
+        toast.error('Failed to register for event: ' + error.message);
+        return;
+      }
+
+      toast.success('Successfully registered for event!');
     } catch (error) {
       console.error('Error in registerForEvent:', error);
       toast.error('An unexpected error occurred');
     }
   };
 
-  const unregisterFromEvent = (eventId: string, userId: string) => {
+  const unregisterFromEvent = async (eventId: string, userId: string) => {
+    if (!isAuthenticated || !user) {
+      toast.error('You must be logged in to unregister from events');
+      return;
+    }
+
     try {
-      // First update in Supabase
-      supabase
+      const { error } = await supabase
         .from('event_registrations')
         .delete()
-        .match({ event_id: eventId, user_id: userId })
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error unregistering from event in Supabase:', error);
-            toast.error('Failed to unregister from event: ' + error.message);
-            
-            // Fallback: Update in local storage if Supabase fails
-            const updatedEvents = events.map(event => {
-              if (event.id === eventId) {
-                return {
-                  ...event,
-                  registeredUsers: event.registeredUsers.filter(id => id !== userId),
-                };
-              }
-              return event;
-            });
-            saveEvents(updatedEvents);
-            toast.info('Registration removed locally (offline mode)');
-          }
-          
-          // Also update user registrations
-          const updatedRegistrations = userRegistrations.filter(id => id !== eventId);
-          saveUserRegistrations(updatedRegistrations);
-        });
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error unregistering from event:', error);
+        toast.error('Failed to unregister from event: ' + error.message);
+        return;
+      }
+
+      toast.success('Successfully unregistered from event!');
     } catch (error) {
       console.error('Error in unregisterFromEvent:', error);
       toast.error('An unexpected error occurred');

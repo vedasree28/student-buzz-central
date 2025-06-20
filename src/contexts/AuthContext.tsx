@@ -32,8 +32,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile from the profiles table
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
+      // Use a more generic query approach to avoid TypeScript issues with the profiles table
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles' as any)
         .select('id, name, email, role')
         .eq('id', userId)
         .single();
@@ -43,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      return data as UserProfile;
+      return data;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;

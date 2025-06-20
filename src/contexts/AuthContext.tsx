@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      return data;
+      return data as UserProfile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;

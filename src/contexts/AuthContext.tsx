@@ -29,22 +29,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile from the profiles table
+  // Fetch user profile from the user_roles table and auth user data
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
-      // Use a more generic query approach to avoid TypeScript issues with the profiles table
-      const { data, error } = await supabase
-        .from('profiles' as any)
-        .select('id, name, email, role')
-        .eq('id', userId)
+      // Get the user's role from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
+      if (roleError) {
+        console.error('Error fetching user role:', roleError);
+        // Default to 'user' role if no role found
+      }
+
+      // Get user data from auth
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authData.user) {
+        console.error('Error fetching auth user:', authError);
         return null;
       }
 
-      return data as UserProfile;
+      const authUser = authData.user;
+      
+      // Construct user profile from available data
+      const userProfile: UserProfile = {
+        id: userId,
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        email: authUser.email || '',
+        role: roleData?.role || 'user'
+      };
+
+      return userProfile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;

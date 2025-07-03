@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import type { UserProfile } from '@/types/auth';
@@ -57,7 +56,7 @@ export const loginUser = async (email: string, password: string) => {
     if (error && error.message.includes('Invalid login credentials')) {
       console.log('Demo account not found, creating it...');
       
-      // Create the demo account
+      // Create the demo account with email confirmation disabled
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -85,18 +84,19 @@ export const loginUser = async (email: string, password: string) => {
           console.error('Error assigning role:', roleError);
         }
 
-        // Now try to login again
-        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (loginError) {
-          throw loginError;
+        // For demo accounts, if the user was created but needs confirmation,
+        // show a helpful message
+        if (!signUpData.session) {
+          toast.info('Demo account created! Please check the console for confirmation - in a real app, you would disable email confirmation for demo accounts in Supabase settings.');
+          throw new Error('Demo account created but requires email confirmation. Please disable email confirmation in Supabase Auth settings for seamless demo experience.');
         }
 
-        return loginData;
+        return signUpData;
       }
+    } else if (error && error.message.includes('Email not confirmed')) {
+      // Handle the case where demo account exists but isn't confirmed
+      toast.error('Demo account requires email confirmation. Please disable email confirmation in Supabase Auth settings for demo accounts to work seamlessly.');
+      throw new Error('Email not confirmed. For demo accounts to work properly, please disable "Confirm email" in your Supabase project settings under Authentication > Settings.');
     } else if (error) {
       throw error;
     } else {

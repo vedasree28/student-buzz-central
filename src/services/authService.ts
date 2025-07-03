@@ -44,7 +44,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
 
 export const loginUser = async (email: string, password: string) => {
   // Check if this is a demo account login attempt
-  const isDemoAccount = email === 'admin@campus.edu' || email === 'student@campus.edu';
+  const isDemoAccount = email === 'admin@demo.com' || email === 'student@demo.com';
   
   if (isDemoAccount) {
     // Try to login first
@@ -64,7 +64,7 @@ export const loginUser = async (email: string, password: string) => {
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            name: email === 'admin@campus.edu' ? 'Admin User' : 'Student User',
+            name: email === 'admin@demo.com' ? 'Admin User' : 'Student User',
           }
         }
       });
@@ -76,7 +76,7 @@ export const loginUser = async (email: string, password: string) => {
       // If signup was successful, assign the appropriate role
       if (signUpData.user) {
         try {
-          if (email === 'admin@campus.edu') {
+          if (email === 'admin@demo.com') {
             await supabase.rpc('assign_admin_role', { email_address: email });
           } else {
             await supabase.rpc('assign_user_role', { email_address: email });

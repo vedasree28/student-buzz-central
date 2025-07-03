@@ -125,13 +125,13 @@ const Login = () => {
             <div className="rounded-md bg-muted p-3 flex justify-between items-center">
               <div>
                 <div className="font-medium">Admin Account</div>
-                <div className="text-muted-foreground">admin@campus.edu / admin123</div>
+                <div className="text-muted-foreground">admin@demo.com / admin123</div>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => {
-                  setEmail('admin@campus.edu');
+                  setEmail('admin@demo.com');
                   setPassword('admin123');
                 }}
               >
@@ -142,13 +142,13 @@ const Login = () => {
             <div className="rounded-md bg-muted p-3 flex justify-between items-center">
               <div>
                 <div className="font-medium">Student Account</div>
-                <div className="text-muted-foreground">student@campus.edu / student123</div>
+                <div className="text-muted-foreground">student@demo.com / student123</div>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => {
-                  setEmail('student@campus.edu');
+                  setEmail('student@demo.com');
                   setPassword('student123');
                 }}
               >

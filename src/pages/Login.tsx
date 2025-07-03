@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from 'lucide-react';
+import { Calendar, AlertCircle } from 'lucide-react';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 const Login = () => {
@@ -77,8 +77,9 @@ const Login = () => {
               </div>
               
               {error && (
-                <div className="text-sm text-red-500">
-                  {error}
+                <div className="text-sm text-red-500 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
                 </div>
               )}
               
@@ -118,6 +119,19 @@ const Login = () => {
               <span className="bg-background px-2 text-muted-foreground">
                 Demo Accounts
               </span>
+            </div>
+          </div>
+          
+          <div className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium">Demo Account Setup</p>
+                <p className="mt-1">
+                  If demo accounts require email confirmation, go to your Supabase Dashboard → 
+                  Authentication → Settings and disable "Enable email confirmations" for instant access.
+                </p>
+              </div>
             </div>
           </div>
           

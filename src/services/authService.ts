@@ -43,6 +43,69 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
 };
 
 export const loginUser = async (email: string, password: string) => {
+  // Check if this is a demo account login attempt
+  const isDemoAccount = email === 'admin@campus.edu' || email === 'student@campus.edu';
+  
+  if (isDemoAccount) {
+    // Try to login first
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    // If login fails with invalid credentials, create the demo account
+    if (error && error.message.includes('Invalid login credentials')) {
+      console.log('Demo account not found, creating it...');
+      
+      // Create the demo account
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: email === 'admin@campus.edu' ? 'Admin User' : 'Student User',
+          }
+        }
+      });
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      // If signup was successful, assign the appropriate role
+      if (signUpData.user) {
+        try {
+          if (email === 'admin@campus.edu') {
+            await supabase.rpc('assign_admin_role', { email_address: email });
+          } else {
+            await supabase.rpc('assign_user_role', { email_address: email });
+          }
+        } catch (roleError) {
+          console.error('Error assigning role:', roleError);
+        }
+
+        // Now try to login again
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (loginError) {
+          throw loginError;
+        }
+
+        return loginData;
+      }
+    } else if (error) {
+      throw error;
+    } else {
+      // Login was successful
+      return data;
+    }
+  }
+
+  // Regular login for non-demo accounts
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -69,6 +132,15 @@ export const registerUser = async (name: string, email: string, password: string
 
   if (error) {
     throw error;
+  }
+
+  // Assign default user role for new registrations
+  if (data.user) {
+    try {
+      await supabase.rpc('assign_user_role', { email_address: email });
+    } catch (roleError) {
+      console.error('Error assigning user role:', roleError);
+    }
   }
 
   return data;

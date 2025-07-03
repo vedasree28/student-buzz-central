@@ -126,10 +126,10 @@ const Login = () => {
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-800">
-                <p className="font-medium">Demo Account Setup</p>
+                <p className="font-medium">Troubleshooting Demo Accounts</p>
                 <p className="mt-1">
-                  If demo accounts require email confirmation, go to your Supabase Dashboard → 
-                  Authentication → Settings and disable "Enable email confirmations" for instant access.
+                  If demo accounts still ask for email confirmation after disabling it in settings, 
+                  go to your Supabase Dashboard → Authentication → Users and manually confirm or delete the existing demo accounts.
                 </p>
               </div>
             </div>

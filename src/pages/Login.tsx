@@ -117,21 +117,8 @@ const Login = () => {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                Demo Accounts
+                Try Demo Accounts
               </span>
-            </div>
-          </div>
-          
-          <div className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium">Troubleshooting Demo Accounts</p>
-                <p className="mt-1">
-                  If demo accounts still ask for email confirmation after disabling it in settings, 
-                  go to your Supabase Dashboard → Authentication → Users and manually confirm or delete the existing demo accounts.
-                </p>
-              </div>
             </div>
           </div>
           

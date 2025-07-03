@@ -54,12 +54,12 @@ export const loginUser = async (email: string, password: string) => {
       password,
     });
 
-    // If login fails, try to create or fix the demo account
+    // If login fails, create the demo account
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
         console.log('Demo account not found, creating it...');
         
-        // Create the demo account
+        // Create the demo account with email confirmation disabled
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -72,31 +72,45 @@ export const loginUser = async (email: string, password: string) => {
         });
 
         if (signUpError) {
+          console.error('Demo account creation failed:', signUpError);
           throw signUpError;
         }
 
         // If signup was successful, assign the appropriate role
         if (signUpData.user) {
+          console.log('Demo account created successfully:', signUpData.user.id);
+          
           try {
             if (email === 'admin@demo.com') {
               await supabase.rpc('assign_admin_role', { email_address: email });
+              console.log('Admin role assigned successfully');
             } else {
               await supabase.rpc('assign_user_role', { email_address: email });
+              console.log('User role assigned successfully');
             }
           } catch (roleError) {
             console.error('Error assigning role:', roleError);
           }
 
-          // For demo accounts, show success message
+          // Since email confirmation is disabled, the user should be automatically logged in
+          // Try to login again immediately after account creation
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (loginError) {
+            console.error('Login after signup failed:', loginError);
+            toast.error('Demo account created but login failed. Please try logging in again.');
+            throw loginError;
+          }
+
           toast.success('Demo account created and logged in successfully!');
-          return signUpData;
+          return loginData;
         }
-      } else if (error.message.includes('Email not confirmed')) {
-        // For existing unconfirmed demo accounts, show helpful message
-        toast.error('Demo account exists but email is not confirmed. Since you disabled email confirmations, you may need to manually confirm existing demo accounts in your Supabase Dashboard → Authentication → Users, or delete and recreate them.');
-        throw new Error('Email not confirmed. Please manually confirm the demo account in Supabase Dashboard or delete and recreate it.');
       } else {
         // Other errors
+        console.error('Demo account login error:', error);
         throw error;
       }
     } else {

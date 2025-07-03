@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import type { UserProfile } from '@/types/auth';
@@ -56,7 +57,7 @@ export const loginUser = async (email: string, password: string) => {
     if (error && error.message.includes('Invalid login credentials')) {
       console.log('Demo account not found, creating it...');
       
-      // Create the demo account with email confirmation disabled
+      // Create the demo account
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -84,19 +85,18 @@ export const loginUser = async (email: string, password: string) => {
           console.error('Error assigning role:', roleError);
         }
 
-        // For demo accounts, if the user was created but needs confirmation,
-        // show a helpful message
+        // For demo accounts, show a helpful message about email confirmation
         if (!signUpData.session) {
-          toast.info('Demo account created! Please check the console for confirmation - in a real app, you would disable email confirmation for demo accounts in Supabase settings.');
-          throw new Error('Demo account created but requires email confirmation. Please disable email confirmation in Supabase Auth settings for seamless demo experience.');
+          toast.info('Demo account created! For instant access, please disable email confirmation in Supabase Auth settings, or check your email to confirm the account.');
+          throw new Error('Demo account created but requires email confirmation. For seamless demo experience, disable "Confirm email" in Supabase Auth settings under Authentication > Settings.');
         }
 
         return signUpData;
       }
     } else if (error && error.message.includes('Email not confirmed')) {
       // Handle the case where demo account exists but isn't confirmed
-      toast.error('Demo account requires email confirmation. Please disable email confirmation in Supabase Auth settings for demo accounts to work seamlessly.');
-      throw new Error('Email not confirmed. For demo accounts to work properly, please disable "Confirm email" in your Supabase project settings under Authentication > Settings.');
+      toast.error('Demo account requires email confirmation. For instant demo access, please disable email confirmation in Supabase Auth settings.');
+      throw new Error('Email not confirmed. For demo accounts to work instantly, please disable "Confirm email" in your Supabase project settings under Authentication > Settings.');
     } else if (error) {
       throw error;
     } else {

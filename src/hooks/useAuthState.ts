@@ -47,8 +47,12 @@ export const useAuthState = () => {
               setUser(profile);
               
               // If this is a Google OAuth sign-in and we're on login page, redirect to dashboard
-              if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+              if (event === 'SIGNED_IN' && 
+                  session.user.app_metadata?.provider === 'google' && 
+                  window.location.pathname === '/login') {
+                console.log('Redirecting Google user to dashboard');
                 window.location.href = '/dashboard';
+                return;
               }
             } catch (error) {
               console.error('Profile fetch failed:', error);
@@ -110,6 +114,13 @@ export const useAuthState = () => {
             setSession(session);
             setUser(profile);
             setIsLoading(false);
+            
+            // Check if we need to redirect after Google OAuth
+            if (session.user.app_metadata?.provider === 'google' && 
+                window.location.pathname === '/login') {
+              console.log('Redirecting existing Google user to dashboard');
+              window.location.href = '/dashboard';
+            }
           }).catch(error => {
             console.error('Profile fetch failed:', error);
             // Create basic profile for existing Google users
@@ -122,6 +133,13 @@ export const useAuthState = () => {
             setSession(session);
             setUser(basicProfile);
             setIsLoading(false);
+            
+            // Redirect Google users
+            if (session.user.app_metadata?.provider === 'google' && 
+                window.location.pathname === '/login') {
+              console.log('Redirecting Google user with basic profile to dashboard');
+              window.location.href = '/dashboard';
+            }
           });
         }
       } else {

@@ -30,7 +30,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     // Construct user profile from available data
     const userProfile: UserProfile = {
       id: userId,
-      name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+      name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
       email: authUser.email || '',
       role: roleData?.role || 'user'
     };
@@ -101,6 +101,7 @@ const createDemoAccount = async (email: string, password: string) => {
         emailRedirectTo: `${window.location.origin}/`,
         data: {
           name: email === 'admin@demo.com' ? 'Admin User' : 'Student User',
+          full_name: email === 'admin@demo.com' ? 'Admin User' : 'Student User',
         }
       }
     });
@@ -167,6 +168,7 @@ export const registerUser = async (name: string, email: string, password: string
       emailRedirectTo: `${window.location.origin}/`,
       data: {
         name: name,
+        full_name: name,
       }
     }
   });
@@ -199,7 +201,7 @@ export const signInWithGoogle = async () => {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/`
+      redirectTo: `${window.location.origin}/dashboard`
     }
   });
   

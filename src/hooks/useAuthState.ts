@@ -24,7 +24,7 @@ export const useAuthState = () => {
           if (isDemoAccount) {
             const quickProfile = {
               id: session.user.id,
-              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
               email: session.user.email || '',
               role: session.user.email === 'admin@demo.com' ? 'admin' as const : 'user' as const
             };
@@ -41,9 +41,35 @@ export const useAuthState = () => {
               }
             }, 0);
           } else {
-            // Fetch user profile for regular accounts
-            const profile = await fetchUserProfile(session.user.id);
-            setUser(profile);
+            // For Google OAuth and regular accounts, fetch user profile
+            try {
+              const profile = await fetchUserProfile(session.user.id);
+              setUser(profile);
+              
+              // If this is a Google OAuth sign-in and we're on login page, redirect to dashboard
+              if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+                window.location.href = '/dashboard';
+              }
+            } catch (error) {
+              console.error('Profile fetch failed:', error);
+              // For Google users, create a basic profile if fetch fails
+              const basicProfile = {
+                id: session.user.id,
+                name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                email: session.user.email || '',
+                role: 'user' as const
+              };
+              setUser(basicProfile);
+              
+              // Assign user role for Google OAuth users who don't have one yet
+              if (session.user.app_metadata?.provider === 'google') {
+                try {
+                  await supabase.rpc('assign_user_role', { email_address: session.user.email });
+                } catch (roleError) {
+                  console.error('Error assigning role to Google user:', roleError);
+                }
+              }
+            }
             setIsLoading(false);
           }
         } else {
@@ -67,7 +93,7 @@ export const useAuthState = () => {
         if (isDemoAccount) {
           const quickProfile = {
             id: session.user.id,
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
             email: session.user.email || '',
             role: session.user.email === 'admin@demo.com' ? 'admin' as const : 'user' as const
           };
@@ -83,6 +109,18 @@ export const useAuthState = () => {
           fetchUserProfile(session.user.id).then(profile => {
             setSession(session);
             setUser(profile);
+            setIsLoading(false);
+          }).catch(error => {
+            console.error('Profile fetch failed:', error);
+            // Create basic profile for existing Google users
+            const basicProfile = {
+              id: session.user.id,
+              name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email || '',
+              role: 'user' as const
+            };
+            setSession(session);
+            setUser(basicProfile);
             setIsLoading(false);
           });
         }

@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (email === 'admin@demo.com' || email === 'student@demo.com') {
           const quickProfile = {
             id: data.user.id,
-            name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+            name: data.user.user_metadata?.name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
             email: data.user.email || '',
             role: email === 'admin@demo.com' ? 'admin' as const : 'user' as const
           };
@@ -88,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleGoogleLogin = async () => {
     try {
       await signInWithGoogle();
+      // Don't show success message here as the user will be redirected
     } catch (error: any) {
       console.error('Google login error:', error);
       toast.error('Google login failed. Please try again.');

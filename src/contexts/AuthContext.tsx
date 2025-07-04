@@ -23,9 +23,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await loginUser(email, password);
 
       if (data.user) {
-        const profile = await fetchUserProfile(data.user.id);
-        setUser(profile);
-        setSession(data.session);
+        // For demo accounts, set basic user info immediately to reduce lag
+        if (email === 'admin@demo.com' || email === 'student@demo.com') {
+          const quickProfile = {
+            id: data.user.id,
+            name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+            email: data.user.email || '',
+            role: email === 'admin@demo.com' ? 'admin' as const : 'user' as const
+          };
+          setUser(quickProfile);
+          setSession(data.session);
+          
+          // Fetch complete profile in background
+          fetchUserProfile(data.user.id).then(profile => {
+            if (profile) setUser(profile);
+          }).catch(console.error);
+        } else {
+          const profile = await fetchUserProfile(data.user.id);
+          setUser(profile);
+          setSession(data.session);
+        }
+        
         toast.success(`Welcome back!`);
       }
     } catch (error: any) {

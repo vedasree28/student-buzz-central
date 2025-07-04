@@ -18,14 +18,38 @@ export const useAuthState = () => {
         setSession(session);
 
         if (session?.user) {
-          // Fetch user profile when authenticated
-          const profile = await fetchUserProfile(session.user.id);
-          setUser(profile);
+          // For demo accounts, set basic info immediately to reduce perceived lag
+          const isDemoAccount = session.user.email === 'admin@demo.com' || session.user.email === 'student@demo.com';
+          
+          if (isDemoAccount) {
+            const quickProfile = {
+              id: session.user.id,
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email || '',
+              role: session.user.email === 'admin@demo.com' ? 'admin' as const : 'user' as const
+            };
+            setUser(quickProfile);
+            setIsLoading(false);
+            
+            // Fetch complete profile in background
+            setTimeout(async () => {
+              try {
+                const profile = await fetchUserProfile(session.user.id);
+                if (profile) setUser(profile);
+              } catch (error) {
+                console.error('Background profile fetch failed:', error);
+              }
+            }, 0);
+          } else {
+            // Fetch user profile for regular accounts
+            const profile = await fetchUserProfile(session.user.id);
+            setUser(profile);
+            setIsLoading(false);
+          }
         } else {
           setUser(null);
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       }
     );
 
@@ -38,11 +62,30 @@ export const useAuthState = () => {
       }
 
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(profile => {
+        const isDemoAccount = session.user.email === 'admin@demo.com' || session.user.email === 'student@demo.com';
+        
+        if (isDemoAccount) {
+          const quickProfile = {
+            id: session.user.id,
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            email: session.user.email || '',
+            role: session.user.email === 'admin@demo.com' ? 'admin' as const : 'user' as const
+          };
           setSession(session);
-          setUser(profile);
+          setUser(quickProfile);
           setIsLoading(false);
-        });
+          
+          // Background profile fetch
+          fetchUserProfile(session.user.id).then(profile => {
+            if (profile) setUser(profile);
+          }).catch(console.error);
+        } else {
+          fetchUserProfile(session.user.id).then(profile => {
+            setSession(session);
+            setUser(profile);
+            setIsLoading(false);
+          });
+        }
       } else {
         setIsLoading(false);
       }

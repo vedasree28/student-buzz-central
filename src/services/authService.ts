@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import type { UserProfile } from '@/types/auth';
@@ -42,82 +43,10 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
 };
 
 export const loginUser = async (email: string, password: string) => {
-  // Check if this is a demo account login attempt
   const isDemoAccount = email === 'admin@demo.com' || email === 'student@demo.com';
   
   if (isDemoAccount) {
-    console.log('Attempting demo account login...');
-    
-    // Try to login first
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    // If login fails, create the demo account
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        console.log('Demo account not found, creating it...');
-        
-        // Create the demo account with email confirmation disabled
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              name: email === 'admin@demo.com' ? 'Admin User' : 'Student User',
-            }
-          }
-        });
-
-        if (signUpError) {
-          console.error('Demo account creation failed:', signUpError);
-          throw signUpError;
-        }
-
-        // If signup was successful, assign the appropriate role
-        if (signUpData.user) {
-          console.log('Demo account created successfully:', signUpData.user.id);
-          
-          try {
-            if (email === 'admin@demo.com') {
-              await supabase.rpc('assign_admin_role', { email_address: email });
-              console.log('Admin role assigned successfully');
-            } else {
-              await supabase.rpc('assign_user_role', { email_address: email });
-              console.log('User role assigned successfully');
-            }
-          } catch (roleError) {
-            console.error('Error assigning role:', roleError);
-          }
-
-          // Since email confirmation is disabled, the user should be automatically logged in
-          // Try to login again immediately after account creation
-          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (loginError) {
-            console.error('Login after signup failed:', loginError);
-            toast.error('Demo account created but login failed. Please try logging in again.');
-            throw loginError;
-          }
-
-          toast.success('Demo account created and logged in successfully!');
-          return loginData;
-        }
-      } else {
-        // Other errors
-        console.error('Demo account login error:', error);
-        throw error;
-      }
-    } else {
-      // Login was successful
-      console.log('Demo account login successful');
-      return data;
-    }
+    return handleDemoAccountLogin(email, password);
   }
 
   // Regular login for non-demo accounts
@@ -131,6 +60,103 @@ export const loginUser = async (email: string, password: string) => {
   }
 
   return data;
+};
+
+const handleDemoAccountLogin = async (email: string, password: string) => {
+  console.log('Attempting demo account login for:', email);
+  
+  try {
+    // First, try to login directly
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (!error && data.user) {
+      console.log('Demo account login successful');
+      return data;
+    }
+
+    // If login fails, create the demo account
+    if (error?.message.includes('Invalid login credentials')) {
+      console.log('Creating demo account...');
+      return await createDemoAccount(email, password);
+    }
+
+    // For other errors, throw them
+    throw error;
+  } catch (error) {
+    console.error('Demo account login error:', error);
+    throw error;
+  }
+};
+
+const createDemoAccount = async (email: string, password: string) => {
+  try {
+    // Create the demo account
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        data: {
+          name: email === 'admin@demo.com' ? 'Admin User' : 'Student User',
+        }
+      }
+    });
+
+    if (signUpError) {
+      console.error('Demo account creation failed:', signUpError);
+      throw signUpError;
+    }
+
+    if (!signUpData.user) {
+      throw new Error('Failed to create demo account');
+    }
+
+    console.log('Demo account created:', signUpData.user.id);
+
+    // Assign role asynchronously to reduce lag
+    const rolePromise = assignDemoRole(email);
+    
+    // Try to login immediately after account creation
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    // Wait for role assignment in background
+    rolePromise.catch(error => {
+      console.error('Role assignment failed (background):', error);
+    });
+
+    if (loginError) {
+      console.error('Login after signup failed:', loginError);
+      toast.error('Demo account created but login failed. Please try again.');
+      throw loginError;
+    }
+
+    toast.success(`Demo account created and logged in successfully!`);
+    return loginData;
+  } catch (error) {
+    console.error('Error creating demo account:', error);
+    throw error;
+  }
+};
+
+const assignDemoRole = async (email: string) => {
+  try {
+    if (email === 'admin@demo.com') {
+      await supabase.rpc('assign_admin_role', { email_address: email });
+      console.log('Admin role assigned');
+    } else {
+      await supabase.rpc('assign_user_role', { email_address: email });
+      console.log('User role assigned');
+    }
+  } catch (error) {
+    console.error('Error assigning role:', error);
+    throw error;
+  }
 };
 
 export const registerUser = async (name: string, email: string, password: string) => {

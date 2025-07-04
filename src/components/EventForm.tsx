@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEvents, EventCategory, CampusType } from '@/contexts/EventContext';
+import { useEvents } from '@/contexts/EventContext';
+import { EventCategory, CampusType } from '@/types/eventTypes';
 import { format } from 'date-fns';
 import { ArrowLeft } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";

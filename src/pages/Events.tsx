@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useEvents, EventCategory, EventStatus } from '@/contexts/EventContext';
+import { useEvents } from '@/contexts/EventContext';
+import { EventCategory, EventStatus } from '@/types/eventTypes';
 import EventCard from '@/components/EventCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';

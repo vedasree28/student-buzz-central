@@ -18,6 +18,19 @@ export type EventType = {
   registeredUsers: string[]; // array of user IDs
 };
 
+export type EventFormData = {
+  title: string;
+  description: string;
+  category: EventCategory;
+  location: string;
+  campus_type: CampusType;
+  start_date: string;
+  end_date: string;
+  image_url: string;
+  organizer: string;
+  capacity: number;
+};
+
 export type EventContextType = {
   events: EventType[];
   userRegistrations: string[]; // array of event IDs the current user is registered for

@@ -155,6 +155,18 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Register for event mutation
   const registerMutation = useMutation({
     mutationFn: async ({ eventId, userId }: { eventId: string; userId: string }) => {
+      // First check if already registered
+      const { data: existingRegistration } = await supabase
+        .from('event_registrations')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingRegistration) {
+        throw new Error('You are already registered for this event');
+      }
+
       const { error } = await supabase
         .from('event_registrations')
         .insert([{ event_id: eventId, user_id: userId }]);
@@ -162,12 +174,17 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate both events and user registrations to update the UI
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['userRegistrations'] });
       toast.success('Successfully registered for event!');
     },
     onError: (error: any) => {
-      toast.error(`Failed to register: ${error.message}`);
+      if (error.message === 'You are already registered for this event') {
+        toast.info('You are already registered for this event');
+      } else {
+        toast.error(`Failed to register: ${error.message}`);
+      }
     },
   });
 
@@ -183,6 +200,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate both events and user registrations to update the UI
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['userRegistrations'] });
       toast.success('Successfully unregistered from event!');

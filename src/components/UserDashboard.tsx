@@ -6,10 +6,16 @@ import { Link } from 'react-router-dom';
 import EventCard from '@/components/EventCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bell, Calendar, CalendarPlus } from 'lucide-react';
+import { useEffect } from 'react';
 
 const UserDashboard = () => {
-  const { events, userRegistrations, getEventStatus } = useEvents();
+  const { events, userRegistrations, getEventStatus, refetchEvents } = useEvents();
   const { user } = useAuth();
+  
+  // Refetch events when component mounts to ensure fresh data
+  useEffect(() => {
+    refetchEvents();
+  }, [refetchEvents]);
   
   // Filter events the user is registered for
   const registeredEvents = events.filter(event => userRegistrations.includes(event.id));
@@ -95,7 +101,11 @@ const UserDashboard = () => {
             {upcomingRegisteredEvents.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {upcomingRegisteredEvents.map(event => (
-                  <EventCard key={event.id} event={event} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onRegistrationChange={refetchEvents}
+                  />
                 ))}
               </div>
             ) : (
@@ -115,7 +125,11 @@ const UserDashboard = () => {
             {ongoingRegisteredEvents.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {ongoingRegisteredEvents.map(event => (
-                  <EventCard key={event.id} event={event} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onRegistrationChange={refetchEvents}
+                  />
                 ))}
               </div>
             ) : (
@@ -135,7 +149,12 @@ const UserDashboard = () => {
             {pastRegisteredEvents.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {pastRegisteredEvents.map(event => (
-                  <EventCard key={event.id} event={event} showActions={false} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    showActions={false} 
+                    onRegistrationChange={refetchEvents}
+                  />
                 ))}
               </div>
             ) : (

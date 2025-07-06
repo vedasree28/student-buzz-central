@@ -10,19 +10,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Home = () => {
-  const { events, getEventStatus } = useEvents();
+  const { events, getEventStatus, isLoading } = useEvents();
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [ongoingEvents, setOngoingEvents] = useState([]);
   const [pastEvents, setPastEvents] = useState([]);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
+    console.log('Home component - events changed:', events);
+    console.log('Home component - isLoading:', isLoading);
+    
+    if (!events || events.length === 0) {
+      console.log('No events available for categorization');
+      setUpcomingEvents([]);
+      setOngoingEvents([]);
+      setPastEvents([]);
+      return;
+    }
+
     const now = new Date();
+    console.log('Current time for comparison:', now);
 
     const upcoming = events
       .filter(event => {
         try {
-          return new Date(event.start_date) > now;
+          const startDate = new Date(event.start_date);
+          const isUpcoming = startDate > now;
+          console.log(`Event "${event.title}": start=${event.start_date}, isUpcoming=${isUpcoming}`);
+          return isUpcoming;
         } catch (e) {
           console.error("Error parsing start date:", event.start_date, e);
           return false;
@@ -42,7 +57,9 @@ const Home = () => {
         try {
           const start = new Date(event.start_date);
           const end = new Date(event.end_date);
-          return start <= now && end >= now;
+          const isOngoing = start <= now && end >= now;
+          console.log(`Event "${event.title}": start=${event.start_date}, end=${event.end_date}, isOngoing=${isOngoing}`);
+          return isOngoing;
         } catch (e) {
           console.error("Error parsing dates for ongoing events:", e);
           return false;
@@ -59,7 +76,10 @@ const Home = () => {
     const past = events
       .filter(event => {
         try {
-          return new Date(event.end_date) < now;
+          const endDate = new Date(event.end_date);
+          const isPast = endDate < now;
+          console.log(`Event "${event.title}": end=${event.end_date}, isPast=${isPast}`);
+          return isPast;
         } catch (e) {
           console.error("Error parsing end date:", event.end_date, e);
           return false;
@@ -73,10 +93,16 @@ const Home = () => {
         }
       });
 
+    console.log('Categorized events:', {
+      upcoming: upcoming.length,
+      ongoing: ongoing.length,
+      past: past.length
+    });
+
     setUpcomingEvents(upcoming);
     setOngoingEvents(ongoing);
     setPastEvents(past);
-  }, [events]);
+  }, [events, isLoading]);
 
   // Subscribe to real-time events changes
   useEffect(() => {
@@ -112,6 +138,19 @@ const Home = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center justify-center min-h-[200px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p className="text-muted-foreground">Loading events...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

@@ -24,75 +24,119 @@ const EventContext = createContext<EventContextType | undefined>(undefined);
 export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
 
-  // Fetch all events - visible to everyone
+  // Fetch all events - simplified and more reliable
   const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_date', { ascending: true });
-      
-      if (eventsError) {
-        console.error('Error fetching events:', eventsError);
-        throw eventsError;
+      try {
+        console.log('Fetching events from database...');
+        
+        const { data: eventsData, error: eventsError } = await supabase
+          .from('events')
+          .select('*')
+          .order('start_date', { ascending: true });
+        
+        if (eventsError) {
+          console.error('Error fetching events:', eventsError);
+          throw eventsError;
+        }
+
+        console.log('Raw events data from database:', eventsData);
+
+        if (!eventsData || eventsData.length === 0) {
+          console.log('No events found in database');
+          return [];
+        }
+
+        // Transform events and get registration counts
+        const eventsWithRegistrations: EventType[] = await Promise.all(
+          eventsData.map(async (event) => {
+            try {
+              const { data: registrations, error: regError } = await supabase
+                .from('event_registrations')
+                .select('user_id')
+                .eq('event_id', event.id);
+
+              if (regError) {
+                console.error('Error fetching registrations for event:', event.id, regError);
+              }
+
+              const transformedEvent: EventType = {
+                id: event.id,
+                title: event.title,
+                description: event.description || '',
+                category: event.category as any,
+                location: event.location,
+                campus_type: event.campus_type as any,
+                start_date: event.start_date,
+                end_date: event.end_date,
+                image_url: event.image_url || '',
+                organizer: event.organizer,
+                capacity: event.capacity,
+                registeredUsers: registrations?.map(r => r.user_id).filter(Boolean) || []
+              };
+
+              return transformedEvent;
+            } catch (error) {
+              console.error('Error processing event:', event.id, error);
+              // Return basic event if registration fetch fails
+              return {
+                id: event.id,
+                title: event.title,
+                description: event.description || '',
+                category: event.category as any,
+                location: event.location,
+                campus_type: event.campus_type as any,
+                start_date: event.start_date,
+                end_date: event.end_date,
+                image_url: event.image_url || '',
+                organizer: event.organizer,
+                capacity: event.capacity,
+                registeredUsers: []
+              };
+            }
+          })
+        );
+
+        console.log('Processed events with registrations:', eventsWithRegistrations);
+        return eventsWithRegistrations;
+      } catch (error) {
+        console.error('Critical error in event fetching:', error);
+        toast.error('Failed to load events. Please refresh the page.');
+        return [];
       }
-
-      // Get registration counts for each event
-      const eventsWithRegistrations: EventType[] = await Promise.all(
-        (eventsData || []).map(async (event) => {
-          const { data: registrations, error: regError } = await supabase
-            .from('event_registrations')
-            .select('user_id')
-            .eq('event_id', event.id);
-
-          if (regError) {
-            console.error('Error fetching registrations for event:', event.id, regError);
-          }
-
-          return {
-            id: event.id,
-            title: event.title,
-            description: event.description || '',
-            category: event.category as any,
-            location: event.location,
-            campus_type: event.campus_type as any,
-            start_date: event.start_date,
-            end_date: event.end_date,
-            image_url: event.image_url || '',
-            organizer: event.organizer,
-            capacity: event.capacity,
-            registeredUsers: registrations?.map(r => r.user_id).filter(Boolean) || []
-          };
-        })
-      );
-
-      return eventsWithRegistrations;
     },
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    staleTime: 30000,
     refetchOnWindowFocus: true,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Fetch user registrations
   const { data: userRegistrations = [] } = useQuery({
     queryKey: ['userRegistrations'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return [];
-      }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return [];
+        }
 
-      const { data, error } = await supabase
-        .from('event_registrations')
-        .select('event_id')
-        .eq('user_id', user.id);
-      
-      if (error) {
-        console.error('Error fetching user registrations:', error);
+        const { data, error } = await supabase
+          .from('event_registrations')
+          .select('event_id')
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error('Error fetching user registrations:', error);
+          return [];
+        }
+        
+        return data?.map(r => r.event_id).filter(Boolean) || [];
+      } catch (error) {
+        console.error('Error in user registrations query:', error);
         return [];
       }
-      
-      return data?.map(r => r.event_id).filter(Boolean) || [];
     },
     staleTime: 30000,
     refetchOnWindowFocus: true,

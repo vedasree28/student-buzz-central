@@ -40,7 +40,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         throw eventsError;
       }
 
-      console.log('Fetched events:', eventsData?.length || 0);
+      console.log('Raw events data from Supabase:', eventsData?.length || 0, eventsData);
 
       // Get registration counts for each event
       const eventsWithRegistrations: EventType[] = await Promise.all(
@@ -51,10 +51,10 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             .eq('event_id', event.id);
 
           if (regError) {
-            console.error('Error fetching registrations:', regError);
+            console.error('Error fetching registrations for event:', event.id, regError);
           }
 
-          return {
+          const processedEvent = {
             id: event.id,
             title: event.title,
             description: event.description || '',
@@ -68,9 +68,13 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             capacity: event.capacity,
             registeredUsers: registrations?.map(r => r.user_id).filter(Boolean) || []
           };
+
+          console.log('Processed event:', processedEvent);
+          return processedEvent;
         })
       );
 
+      console.log('Final events with registrations:', eventsWithRegistrations.length, eventsWithRegistrations);
       return eventsWithRegistrations;
     },
     staleTime: 30000, // Consider data fresh for 30 seconds

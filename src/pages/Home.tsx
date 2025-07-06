@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import EventCard from '@/components/EventCard';
@@ -16,12 +17,16 @@ const Home = () => {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
+    console.log('Home component: Processing events', events.length, events);
+    
     const now = new Date();
 
     const upcoming = events
       .filter(event => {
         try {
-          return new Date(event.start_date) > now;
+          const isUpcoming = new Date(event.start_date) > now;
+          console.log('Event upcoming check:', event.title, 'Start:', event.start_date, 'Is upcoming:', isUpcoming);
+          return isUpcoming;
         } catch (e) {
           console.error("Error parsing start date:", event.start_date, e);
           return false;
@@ -41,7 +46,9 @@ const Home = () => {
         try {
           const start = new Date(event.start_date);
           const end = new Date(event.end_date);
-          return start <= now && end >= now;
+          const isOngoing = start <= now && end >= now;
+          console.log('Event ongoing check:', event.title, 'Is ongoing:', isOngoing);
+          return isOngoing;
         } catch (e) {
           console.error("Error parsing dates for ongoing events:", e);
           return false;
@@ -58,7 +65,9 @@ const Home = () => {
     const past = events
       .filter(event => {
         try {
-          return new Date(event.end_date) < now;
+          const isPast = new Date(event.end_date) < now;
+          console.log('Event past check:', event.title, 'End:', event.end_date, 'Is past:', isPast);
+          return isPast;
         } catch (e) {
           console.error("Error parsing end date:", event.end_date, e);
           return false;
@@ -72,6 +81,8 @@ const Home = () => {
         }
       });
 
+    console.log('Categorized events - Upcoming:', upcoming.length, 'Ongoing:', ongoing.length, 'Past:', past.length);
+    
     setUpcomingEvents(upcoming);
     setOngoingEvents(ongoing);
     setPastEvents(past);
@@ -154,6 +165,9 @@ const Home = () => {
       <section className="py-8">
         <div className="container">
           <h2 className="text-3xl font-bold mb-6">Upcoming Events</h2>
+          <div className="mb-4 text-sm text-gray-600">
+            Debug: Found {upcomingEvents.length} upcoming events out of {events.length} total events
+          </div>
           {upcomingEvents.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {upcomingEvents.map(event => (

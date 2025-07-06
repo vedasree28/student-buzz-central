@@ -22,6 +22,7 @@ interface EventType {
   image_url: string;
   organizer: string;
   capacity: number;
+  registeredUsers: string[];
 }
 
 interface EventCardProps {

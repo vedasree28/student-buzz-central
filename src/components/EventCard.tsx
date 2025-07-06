@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, Home, MapPinOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEvents } from '@/contexts/EventContext';
 import { format, isValid } from 'date-fns';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export type EventStatus = 'upcoming' | 'ongoing' | 'past';
 
@@ -41,93 +40,36 @@ const getCampusTypeBadge = (campusType: "on" | "off") => {
   }
   return (
     <span className="inline-flex items-center gap-1 rounded bg-[#D3E4FD] px-2 py-0.5 text-xs font-medium text-[#0EA5E9]">
-      <MapPinOff className="w-4 h-4 inline" /> Off Campus
+      <MapPinOff className="w-4 h-4 inline" /> Off Campus  
     </span>
   );
 };
 
 const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCardProps) => {
   const { user } = useAuth();
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { userRegistrations, registerForEvent, unregisterFromEvent, getEventStatus } = useEvents();
+  const [isLoading, setIsLoading] = useState(false);
   
-  const getEventStatus = (event: EventType): EventStatus => {
-    const now = new Date().getTime();
-    
-    try {
-      const startTime = new Date(event.start_date).getTime();
-      const endTime = new Date(event.end_date).getTime();
-      
-      if (now < startTime) return 'upcoming';
-      if (now > endTime) return 'past';
-      return 'ongoing';
-    } catch (error) {
-      console.error("Error determining event status:", error);
-      return 'upcoming'; // Default fallback
-    }
-  };
-  
-  // Check if user is registered for this event
-  useEffect(() => {
-    checkRegistration();
-  }, [user, event.id]);
-  
-  const checkRegistration = async () => {
-    if (!user) {
-      setIsRegistered(false);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const { data } = await supabase
-        .from('event_registrations')
-        .select('id')
-        .eq('event_id', event.id)
-        .eq('user_id', user.id)
-        .single();
-      
-      setIsRegistered(!!data);
-    } catch (error) {
-      console.error('Error checking registration:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const isRegistered = userRegistrations.includes(event.id);
+  const status = getEventStatus(event);
   
   const handleRegistration = async () => {
     if (!user) {
-      toast.error('Please log in to register for events');
       return;
     }
     
+    setIsLoading(true);
     try {
       if (isRegistered) {
-        await supabase
-          .from('event_registrations')
-          .delete()
-          .eq('event_id', event.id)
-          .eq('user_id', user.id);
-        
-        toast.success('Successfully unregistered from event');
-        setIsRegistered(false);
+        await unregisterFromEvent(event.id, user.id);
       } else {
-        const { error } = await supabase
-          .from('event_registrations')
-          .insert([
-            { event_id: event.id, user_id: user.id }
-          ]);
-        
-        if (error) throw error;
-        
-        toast.success('Successfully registered for event');
-        setIsRegistered(true);
+        await registerForEvent(event.id, user.id);
       }
-      
       onRegistrationChange?.();
     } catch (error) {
-      console.error('Error managing registration:', error);
-      toast.error('Failed to manage registration');
+      console.error('Registration error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -177,8 +119,6 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
         return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const status = getEventStatus(event);
 
   return (
     <div className="event-card flex flex-col h-full">
@@ -239,14 +179,14 @@ const EventCard = ({ event, showActions = true, onRegistrationChange }: EventCar
             <Link to={`/events/${event.id}`}>View Details</Link>
           </Button>
           
-          {showActions && user && status !== 'past' && !isLoading && (
+          {showActions && user && status !== 'past' && (
             <Button 
               variant={isRegistered ? "destructive" : "default"}
               className="flex-1"
               onClick={handleRegistration}
               disabled={isLoading}
             >
-              {isRegistered ? "Cancel Registration" : "Register"}
+              {isLoading ? "Processing..." : (isRegistered ? "Cancel Registration" : "Register")}
             </Button>
           )}
         </div>

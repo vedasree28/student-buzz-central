@@ -25,16 +25,22 @@ const EventContext = createContext<EventContextType | undefined>(undefined);
 export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
 
-  // Fetch events with registration counts
+  // Fetch all events - visible to everyone
   const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
+      console.log('Fetching events for all users...');
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .order('start_date', { ascending: true });
       
-      if (eventsError) throw eventsError;
+      if (eventsError) {
+        console.error('Error fetching events:', eventsError);
+        throw eventsError;
+      }
+
+      console.log('Fetched events:', eventsData?.length || 0);
 
       // Get registration counts for each event
       const eventsWithRegistrations: EventType[] = await Promise.all(
@@ -67,6 +73,8 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       return eventsWithRegistrations;
     },
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   // Fetch user registrations
@@ -74,8 +82,12 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     queryKey: ['userRegistrations'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) {
+        console.log('No user found, returning empty registrations');
+        return [];
+      }
 
+      console.log('Fetching registrations for user:', user.id);
       const { data, error } = await supabase
         .from('event_registrations')
         .select('event_id')
@@ -86,8 +98,12 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return [];
       }
       
-      return data?.map(r => r.event_id).filter(Boolean) || [];
+      const registrations = data?.map(r => r.event_id).filter(Boolean) || [];
+      console.log('User registrations:', registrations);
+      return registrations;
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
 
   // Create event mutation
@@ -155,7 +171,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Register for event mutation
   const registerMutation = useMutation({
     mutationFn: async ({ eventId, userId }: { eventId: string; userId: string }) => {
-      // First check if already registered
+      // Check if already registered first
       const { data: existingRegistration } = await supabase
         .from('event_registrations')
         .select('id')
@@ -164,23 +180,29 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         .maybeSingle();
 
       if (existingRegistration) {
-        throw new Error('You are already registered for this event');
+        throw new Error('ALREADY_REGISTERED');
       }
 
       const { error } = await supabase
         .from('event_registrations')
         .insert([{ event_id: eventId, user_id: userId }]);
       
-      if (error) throw error;
+      if (error) {
+        // Handle unique constraint violation
+        if (error.code === '23505') {
+          throw new Error('ALREADY_REGISTERED');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
-      // Invalidate both events and user registrations to update the UI
+      // Invalidate both queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['userRegistrations'] });
       toast.success('Successfully registered for event!');
     },
     onError: (error: any) => {
-      if (error.message === 'You are already registered for this event') {
+      if (error.message === 'ALREADY_REGISTERED') {
         toast.info('You are already registered for this event');
       } else {
         toast.error(`Failed to register: ${error.message}`);
@@ -200,7 +222,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (error) throw error;
     },
     onSuccess: () => {
-      // Invalidate both events and user registrations to update the UI
+      // Invalidate both queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['userRegistrations'] });
       toast.success('Successfully unregistered from event!');
@@ -231,7 +253,10 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       await createEventMutation.mutateAsync(event as EventFormData);
     },
     getEventStatus: (event: EventType) => getEventStatus(event),
-    refetchEvents: refetch,
+    refetchEvents: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['userRegistrations'] });
+    },
   };
 
   return (

@@ -7,23 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEvents } from '@/contexts/EventContext';
 import { format, isValid } from 'date-fns';
 import { useState } from 'react';
-
-export type EventStatus = 'upcoming' | 'ongoing' | 'past';
-
-interface EventType {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  location: string;
-  campus_type: "on" | "off";
-  start_date: string;
-  end_date: string;
-  image_url: string;
-  organizer: string;
-  capacity: number;
-  registeredUsers: string[];
-}
+import { EventType, EventStatus } from '@/types/eventTypes';
 
 interface EventCardProps {
   event: EventType;

@@ -17,16 +17,12 @@ const Home = () => {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    console.log('Home component: Processing events', events.length, events);
-    
     const now = new Date();
 
     const upcoming = events
       .filter(event => {
         try {
-          const isUpcoming = new Date(event.start_date) > now;
-          console.log('Event upcoming check:', event.title, 'Start:', event.start_date, 'Is upcoming:', isUpcoming);
-          return isUpcoming;
+          return new Date(event.start_date) > now;
         } catch (e) {
           console.error("Error parsing start date:", event.start_date, e);
           return false;
@@ -46,9 +42,7 @@ const Home = () => {
         try {
           const start = new Date(event.start_date);
           const end = new Date(event.end_date);
-          const isOngoing = start <= now && end >= now;
-          console.log('Event ongoing check:', event.title, 'Is ongoing:', isOngoing);
-          return isOngoing;
+          return start <= now && end >= now;
         } catch (e) {
           console.error("Error parsing dates for ongoing events:", e);
           return false;
@@ -65,9 +59,7 @@ const Home = () => {
     const past = events
       .filter(event => {
         try {
-          const isPast = new Date(event.end_date) < now;
-          console.log('Event past check:', event.title, 'End:', event.end_date, 'Is past:', isPast);
-          return isPast;
+          return new Date(event.end_date) < now;
         } catch (e) {
           console.error("Error parsing end date:", event.end_date, e);
           return false;
@@ -81,8 +73,6 @@ const Home = () => {
         }
       });
 
-    console.log('Categorized events - Upcoming:', upcoming.length, 'Ongoing:', ongoing.length, 'Past:', past.length);
-    
     setUpcomingEvents(upcoming);
     setOngoingEvents(ongoing);
     setPastEvents(past);
@@ -125,7 +115,7 @@ const Home = () => {
 
   return (
     <div>
-      {/* (Hero / Welcome Section) */}
+      {/* Hero / Welcome Section */}
       <section className="py-12 bg-gradient-to-r from-blue-50 to-purple-50 border-b">
         <div className="container flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="max-w-xl">
@@ -161,13 +151,10 @@ const Home = () => {
         </div>
       </section>
 
-      {/* (Upcoming Events Section) */}
+      {/* Upcoming Events Section */}
       <section className="py-8">
         <div className="container">
           <h2 className="text-3xl font-bold mb-6">Upcoming Events</h2>
-          <div className="mb-4 text-sm text-gray-600">
-            Debug: Found {upcomingEvents.length} upcoming events out of {events.length} total events
-          </div>
           {upcomingEvents.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {upcomingEvents.map(event => (
@@ -188,7 +175,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* (Ongoing Events Section) */}
+      {/* Ongoing Events Section */}
       <section className="py-8 bg-gray-50">
         <div className="container">
           <h2 className="text-3xl font-bold mb-6">Happening Now</h2>
@@ -212,7 +199,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* (Past Events Section) */}
+      {/* Past Events Section */}
       <section className="py-8">
         <div className="container">
           <h2 className="text-3xl font-bold mb-6">Past Events</h2>

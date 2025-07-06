@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +28,6 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
-      console.log('Fetching events for all users...');
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
@@ -39,8 +37,6 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('Error fetching events:', eventsError);
         throw eventsError;
       }
-
-      console.log('Raw events data from Supabase:', eventsData?.length || 0, eventsData);
 
       // Get registration counts for each event
       const eventsWithRegistrations: EventType[] = await Promise.all(
@@ -54,7 +50,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             console.error('Error fetching registrations for event:', event.id, regError);
           }
 
-          const processedEvent = {
+          return {
             id: event.id,
             title: event.title,
             description: event.description || '',
@@ -68,13 +64,9 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             capacity: event.capacity,
             registeredUsers: registrations?.map(r => r.user_id).filter(Boolean) || []
           };
-
-          console.log('Processed event:', processedEvent);
-          return processedEvent;
         })
       );
 
-      console.log('Final events with registrations:', eventsWithRegistrations.length, eventsWithRegistrations);
       return eventsWithRegistrations;
     },
     staleTime: 30000, // Consider data fresh for 30 seconds
@@ -87,11 +79,9 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('No user found, returning empty registrations');
         return [];
       }
 
-      console.log('Fetching registrations for user:', user.id);
       const { data, error } = await supabase
         .from('event_registrations')
         .select('event_id')
@@ -102,9 +92,7 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return [];
       }
       
-      const registrations = data?.map(r => r.event_id).filter(Boolean) || [];
-      console.log('User registrations:', registrations);
-      return registrations;
+      return data?.map(r => r.event_id).filter(Boolean) || [];
     },
     staleTime: 30000,
     refetchOnWindowFocus: true,

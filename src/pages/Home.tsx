@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import EventCard from '@/components/EventCard';
 import { useEvents } from '@/contexts/EventContext';
@@ -10,34 +10,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Home = () => {
-  const { events, getEventStatus, isLoading } = useEvents();
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [ongoingEvents, setOngoingEvents] = useState([]);
-  const [pastEvents, setPastEvents] = useState([]);
+  const { events, isLoading } = useEvents();
   const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    console.log('Home component - events changed:', events);
-    console.log('Home component - isLoading:', isLoading);
-    
+  // Memoize event categorization to prevent unnecessary recalculations
+  const { upcomingEvents, ongoingEvents, pastEvents } = useMemo(() => {
     if (!events || events.length === 0) {
-      console.log('No events available for categorization');
-      setUpcomingEvents([]);
-      setOngoingEvents([]);
-      setPastEvents([]);
-      return;
+      return {
+        upcomingEvents: [],
+        ongoingEvents: [],
+        pastEvents: []
+      };
     }
 
     const now = new Date();
-    console.log('Current time for comparison:', now);
-
+    
     const upcoming = events
       .filter(event => {
         try {
           const startDate = new Date(event.start_date);
-          const isUpcoming = startDate > now;
-          console.log(`Event "${event.title}": start=${event.start_date}, isUpcoming=${isUpcoming}`);
-          return isUpcoming;
+          return startDate > now;
         } catch (e) {
           console.error("Error parsing start date:", event.start_date, e);
           return false;
@@ -47,7 +39,6 @@ const Home = () => {
         try {
           return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
         } catch (e) {
-          console.error("Error sorting dates:", e);
           return 0;
         }
       });
@@ -57,9 +48,7 @@ const Home = () => {
         try {
           const start = new Date(event.start_date);
           const end = new Date(event.end_date);
-          const isOngoing = start <= now && end >= now;
-          console.log(`Event "${event.title}": start=${event.start_date}, end=${event.end_date}, isOngoing=${isOngoing}`);
-          return isOngoing;
+          return start <= now && end >= now;
         } catch (e) {
           console.error("Error parsing dates for ongoing events:", e);
           return false;
@@ -77,9 +66,7 @@ const Home = () => {
       .filter(event => {
         try {
           const endDate = new Date(event.end_date);
-          const isPast = endDate < now;
-          console.log(`Event "${event.title}": end=${event.end_date}, isPast=${isPast}`);
-          return isPast;
+          return endDate < now;
         } catch (e) {
           console.error("Error parsing end date:", event.end_date, e);
           return false;
@@ -93,20 +80,16 @@ const Home = () => {
         }
       });
 
-    console.log('Categorized events:', {
-      upcoming: upcoming.length,
-      ongoing: ongoing.length,
-      past: past.length
-    });
+    return {
+      upcomingEvents: upcoming,
+      ongoingEvents: ongoing,
+      pastEvents: past
+    };
+  }, [events]);
 
-    setUpcomingEvents(upcoming);
-    setOngoingEvents(ongoing);
-    setPastEvents(past);
-  }, [events, isLoading]);
-
-  // Subscribe to real-time events changes
+  // Simplified real-time subscription - only subscribe once
   useEffect(() => {
-    const channel = supabase
+    const eventsChannel = supabase
       .channel('public:events')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'events' }, 
@@ -117,14 +100,7 @@ const Home = () => {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Subscribe to real-time registration changes
-  useEffect(() => {
-    const channel = supabase
+    const registrationsChannel = supabase
       .channel('public:event_registrations')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'event_registrations' }, 
@@ -135,7 +111,8 @@ const Home = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(registrationsChannel);
     };
   }, []);
 
@@ -183,7 +160,6 @@ const Home = () => {
             alt="Campus Events"
             className="w-[380px] rounded-xl border shadow"
             onError={(e) => {
-              // Fallback to placeholder if the image fails to load
               e.currentTarget.src = "/placeholder.svg";
             }}
           />

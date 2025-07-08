@@ -24,7 +24,7 @@ const EventContext = createContext<EventContextType | undefined>(undefined);
 export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
 
-  // Fetch all events - simplified and more reliable
+  // Optimized events fetching with better error handling
   const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
@@ -41,64 +41,46 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           throw eventsError;
         }
 
-        console.log('Raw events data from database:', eventsData);
-
         if (!eventsData || eventsData.length === 0) {
           console.log('No events found in database');
           return [];
         }
 
-        // Transform events and get registration counts
-        const eventsWithRegistrations: EventType[] = await Promise.all(
-          eventsData.map(async (event) => {
-            try {
-              const { data: registrations, error: regError } = await supabase
-                .from('event_registrations')
-                .select('user_id')
-                .eq('event_id', event.id);
+        // Batch fetch all registrations to avoid N+1 queries
+        const { data: allRegistrations, error: regError } = await supabase
+          .from('event_registrations')
+          .select('event_id, user_id');
 
-              if (regError) {
-                console.error('Error fetching registrations for event:', event.id, regError);
-              }
+        if (regError) {
+          console.error('Error fetching registrations:', regError);
+        }
 
-              const transformedEvent: EventType = {
-                id: event.id,
-                title: event.title,
-                description: event.description || '',
-                category: event.category as any,
-                location: event.location,
-                campus_type: event.campus_type as any,
-                start_date: event.start_date,
-                end_date: event.end_date,
-                image_url: event.image_url || '',
-                organizer: event.organizer,
-                capacity: event.capacity,
-                registeredUsers: registrations?.map(r => r.user_id).filter(Boolean) || []
-              };
+        // Group registrations by event_id for efficient lookup
+        const registrationsByEvent = (allRegistrations || []).reduce((acc, reg) => {
+          if (!acc[reg.event_id]) {
+            acc[reg.event_id] = [];
+          }
+          acc[reg.event_id].push(reg.user_id);
+          return acc;
+        }, {} as Record<string, string[]>);
 
-              return transformedEvent;
-            } catch (error) {
-              console.error('Error processing event:', event.id, error);
-              // Return basic event if registration fetch fails
-              return {
-                id: event.id,
-                title: event.title,
-                description: event.description || '',
-                category: event.category as any,
-                location: event.location,
-                campus_type: event.campus_type as any,
-                start_date: event.start_date,
-                end_date: event.end_date,
-                image_url: event.image_url || '',
-                organizer: event.organizer,
-                capacity: event.capacity,
-                registeredUsers: []
-              };
-            }
-          })
-        );
+        // Transform events with registrations
+        const eventsWithRegistrations: EventType[] = eventsData.map((event) => ({
+          id: event.id,
+          title: event.title,
+          description: event.description || '',
+          category: event.category as any,
+          location: event.location,
+          campus_type: event.campus_type as any,
+          start_date: event.start_date,
+          end_date: event.end_date,
+          image_url: event.image_url || '',
+          organizer: event.organizer,
+          capacity: event.capacity,
+          registeredUsers: registrationsByEvent[event.id] || []
+        }));
 
-        console.log('Processed events with registrations:', eventsWithRegistrations);
+        console.log('Processed events with registrations:', eventsWithRegistrations.length);
         return eventsWithRegistrations;
       } catch (error) {
         console.error('Critical error in event fetching:', error);
@@ -106,13 +88,13 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return [];
       }
     },
-    staleTime: 30000,
-    refetchOnWindowFocus: true,
-    retry: 3,
-    retryDelay: 1000,
+    staleTime: 60000, // Increased stale time to reduce re-fetching
+    refetchOnWindowFocus: false, // Disable automatic refetch on window focus
+    retry: 2,
+    retryDelay: 2000,
   });
 
-  // Fetch user registrations
+  // User registrations query
   const { data: userRegistrations = [] } = useQuery({
     queryKey: ['userRegistrations'],
     queryFn: async () => {
@@ -138,11 +120,10 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return [];
       }
     },
-    staleTime: 30000,
-    refetchOnWindowFocus: true,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 
-  // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: async (eventData: EventFormData) => {
       const { data, error } = await supabase
@@ -163,7 +144,6 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
   });
 
-  // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, eventData }: { id: string; eventData: Partial<EventFormData> }) => {
       const { data, error } = await supabase
@@ -185,7 +165,6 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
   });
 
-  // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -204,7 +183,6 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
   });
 
-  // Register for event mutation
   const registerMutation = useMutation({
     mutationFn: async ({ eventId, userId }: { eventId: string; userId: string }) => {
       // Check if already registered first
@@ -246,7 +224,6 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
   });
 
-  // Unregister from event mutation
   const unregisterMutation = useMutation({
     mutationFn: async ({ eventId, userId }: { eventId: string; userId: string }) => {
       const { error } = await supabase

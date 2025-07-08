@@ -1,3 +1,4 @@
+
 import { useEvents } from '@/contexts/EventContext';
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
@@ -35,18 +36,38 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminDashboard = () => {
-  const { events, getEventStatus, deleteEvent } = useEvents();
+  const { events, getEventStatus, deleteEvent, refetchEvents } = useEvents();
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   
   const upcomingEvents = events.filter(event => getEventStatus(event) === 'upcoming');
   const ongoingEvents = events.filter(event => getEventStatus(event) === 'ongoing');
   const pastEvents = events.filter(event => getEventStatus(event) === 'past');
   
-  const totalRegistrations = events.reduce((total, event) => total + event.registeredUsers.length, 0);
+  const totalRegistrations = events.reduce((total, event) => total + (event.registeredUsers?.length || 0), 0);
+  
+  // Set up real-time subscription for registration updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin_registrations')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'event_registrations' }, 
+        (payload) => {
+          console.log('Registration update detected:', payload);
+          // Refetch events to get updated registration counts
+          refetchEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetchEvents]);
   
   const handleDelete = () => {
     if (eventToDelete) {
@@ -145,6 +166,7 @@ const AdminDashboard = () => {
             {events.length > 0 ? (
               events.map(event => {
                 const status = getEventStatus(event);
+                const registrationCount = event.registeredUsers?.length || 0;
                 return (
                   <TableRow key={event.id}>
                     <TableCell className="font-medium">
@@ -171,7 +193,8 @@ const AdminDashboard = () => {
                     <TableCell>
                       <div className="flex items-center">
                         <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span>{event.registeredUsers.length} / {event.capacity}</span>
+                        <span className="font-medium">{registrationCount}</span>
+                        <span className="text-muted-foreground"> / {event.capacity}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

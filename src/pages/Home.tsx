@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import EventCard from '@/components/EventCard';
 import { useEvents } from '@/contexts/EventContext';
@@ -10,31 +10,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Home = () => {
-  const { events, isLoading } = useEvents();
+  const { events, getEventStatus } = useEvents();
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [ongoingEvents, setOngoingEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState([]);
   const { isAuthenticated } = useAuth();
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  console.log('Home component render - isLoading:', isLoading, 'events:', events?.length);
-
-  // Memoize event categorization to prevent unnecessary recalculations
-  const { upcomingEvents, ongoingEvents, pastEvents } = useMemo(() => {
-    console.log('Categorizing events:', events?.length || 0);
-    
-    if (!events || events.length === 0) {
-      return {
-        upcomingEvents: [],
-        ongoingEvents: [],
-        pastEvents: []
-      };
-    }
-
+  useEffect(() => {
     const now = new Date();
-    
+
     const upcoming = events
       .filter(event => {
         try {
-          const startDate = new Date(event.start_date);
-          return startDate > now;
+          return new Date(event.start_date) > now;
         } catch (e) {
           console.error("Error parsing start date:", event.start_date, e);
           return false;
@@ -44,6 +32,7 @@ const Home = () => {
         try {
           return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
         } catch (e) {
+          console.error("Error sorting dates:", e);
           return 0;
         }
       });
@@ -70,8 +59,7 @@ const Home = () => {
     const past = events
       .filter(event => {
         try {
-          const endDate = new Date(event.end_date);
-          return endDate < now;
+          return new Date(event.end_date) < now;
         } catch (e) {
           console.error("Error parsing end date:", event.end_date, e);
           return false;
@@ -85,28 +73,14 @@ const Home = () => {
         }
       });
 
-    console.log('Events categorized - upcoming:', upcoming.length, 'ongoing:', ongoing.length, 'past:', past.length);
-
-    return {
-      upcomingEvents: upcoming,
-      ongoingEvents: ongoing,
-      pastEvents: past
-    };
+    setUpcomingEvents(upcoming);
+    setOngoingEvents(ongoing);
+    setPastEvents(past);
   }, [events]);
 
-  // Initialize component
+  // Subscribe to real-time events changes
   useEffect(() => {
-    console.log('Home component initializing...');
-    setIsInitialized(true);
-  }, []);
-
-  // Simplified real-time subscription
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    console.log('Setting up real-time subscriptions...');
-    
-    const eventsChannel = supabase
+    const channel = supabase
       .channel('public:events')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'events' }, 
@@ -117,7 +91,14 @@ const Home = () => {
       )
       .subscribe();
 
-    const registrationsChannel = supabase
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Subscribe to real-time registration changes
+  useEffect(() => {
+    const channel = supabase
       .channel('public:event_registrations')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'event_registrations' }, 
@@ -128,41 +109,9 @@ const Home = () => {
       .subscribe();
 
     return () => {
-      console.log('Cleaning up real-time subscriptions...');
-      supabase.removeChannel(eventsChannel);
-      supabase.removeChannel(registrationsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [isInitialized]);
-
-  // Force render after 2 seconds if still loading
-  useEffect(() => {
-    if (isLoading) {
-      const timeout = setTimeout(() => {
-        console.log('Forcing render after timeout');
-        setIsInitialized(true);
-      }, 2000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [isLoading]);
-
-  console.log('About to render Home component');
-
-  if (isLoading && !isInitialized) {
-    console.log('Showing loading state');
-    return (
-      <div className="container py-8">
-        <div className="flex items-center justify-center min-h-[200px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Loading events...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  console.log('Rendering main Home content');
+  }, []);
 
   return (
     <div>
@@ -195,6 +144,7 @@ const Home = () => {
             alt="Campus Events"
             className="w-[380px] rounded-xl border shadow"
             onError={(e) => {
+              // Fallback to placeholder if the image fails to load
               e.currentTarget.src = "/placeholder.svg";
             }}
           />

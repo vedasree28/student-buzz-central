@@ -12,9 +12,14 @@ import { toast } from "sonner";
 const Home = () => {
   const { events, isLoading } = useEvents();
   const { isAuthenticated } = useAuth();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  console.log('Home component render - isLoading:', isLoading, 'events:', events?.length);
 
   // Memoize event categorization to prevent unnecessary recalculations
   const { upcomingEvents, ongoingEvents, pastEvents } = useMemo(() => {
+    console.log('Categorizing events:', events?.length || 0);
+    
     if (!events || events.length === 0) {
       return {
         upcomingEvents: [],
@@ -80,6 +85,8 @@ const Home = () => {
         }
       });
 
+    console.log('Events categorized - upcoming:', upcoming.length, 'ongoing:', ongoing.length, 'past:', past.length);
+
     return {
       upcomingEvents: upcoming,
       ongoingEvents: ongoing,
@@ -87,8 +94,18 @@ const Home = () => {
     };
   }, [events]);
 
-  // Simplified real-time subscription - only subscribe once
+  // Initialize component
   useEffect(() => {
+    console.log('Home component initializing...');
+    setIsInitialized(true);
+  }, []);
+
+  // Simplified real-time subscription
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    console.log('Setting up real-time subscriptions...');
+    
     const eventsChannel = supabase
       .channel('public:events')
       .on('postgres_changes', 
@@ -111,12 +128,28 @@ const Home = () => {
       .subscribe();
 
     return () => {
+      console.log('Cleaning up real-time subscriptions...');
       supabase.removeChannel(eventsChannel);
       supabase.removeChannel(registrationsChannel);
     };
-  }, []);
+  }, [isInitialized]);
 
-  if (isLoading) {
+  // Force render after 2 seconds if still loading
+  useEffect(() => {
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        console.log('Forcing render after timeout');
+        setIsInitialized(true);
+      }, 2000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoading]);
+
+  console.log('About to render Home component');
+
+  if (isLoading && !isInitialized) {
+    console.log('Showing loading state');
     return (
       <div className="container py-8">
         <div className="flex items-center justify-center min-h-[200px]">
@@ -128,6 +161,8 @@ const Home = () => {
       </div>
     );
   }
+
+  console.log('Rendering main Home content');
 
   return (
     <div>

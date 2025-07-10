@@ -26,18 +26,37 @@ export const EventProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Fetch all events - visible to everyone
   const { data: events = [], isLoading, refetch } = useQuery({
-    queryKey: ['events'],
+    queryKey: ['event_registration_counts'],
     queryFn: async () => {
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
-        .order('start_date', { ascending: true });
+        .order('title', { ascending: true });
       
       if (eventsError) {
         console.error('Error fetching events:', eventsError);
         throw eventsError;
       }
+        const eventsWithCounts: EventType[] = (eventsData || []).map((event) => ({
+        id: event.event_id,
+        title: event.title,
+        description: '', // Not included in the view
+        category: '' as any,
+        location: '',
+        campus_type: '' as any,
+        start_date: '',
+        end_date: '',
+        image_url: '',
+        organizer: '',
+        capacity: 0,
+        registeredUsers: Array(event.total_registrations).fill('') // Simulate user count
+      }));
 
+      return eventsWithCounts;
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
       // Get registration counts for each event
       const eventsWithRegistrations: EventType[] = await Promise.all(
         (eventsData || []).map(async (event) => {

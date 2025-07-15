@@ -98,3 +98,14 @@
     @apply hidden;
   }
 }
+/* --- Custom override to remove Lovable popup --- */
+.lovable-edit-button,
+.lovable-popup,
+iframe[src*="lovable.app"],
+button[aria-label="Edit with Lovable"],
+div[class*="lovable"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+

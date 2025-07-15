@@ -93,4 +93,8 @@
   .heading-3 {
     @apply text-xl font-bold tracking-tight sm:text-2xl;
   }
+  .lovable-edit-button,
+  .lovable-popup {
+    @apply hidden;
+  }
 }
